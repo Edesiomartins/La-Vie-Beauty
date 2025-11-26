@@ -1,8 +1,7 @@
 {
-    "name": "La Vie Beauty",
-    "integrations": {
-      "capacitor": {}
-    },
-    "type": "react-vite"
-  }
-  
+  "name": "La Vie Beauty",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "react-vite"
+}
