@@ -21,10 +21,35 @@ if (!admin.apps.length) {
     } catch (fileError) {
       // Opção 2: Usar variáveis de ambiente (produção Vercel)
       if (process.env.FIREBASE_ADMIN_CLIENT_EMAIL && process.env.FIREBASE_ADMIN_PRIVATE_KEY) {
+        // Processar a chave privada - pode vir com \n literal ou quebras de linha reais
+        let privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY;
+        
+        // Se a chave começa e termina com aspas, removê-las
+        if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
+          privateKey = privateKey.slice(1, -1);
+        }
+        if (privateKey.startsWith("'") && privateKey.endsWith("'")) {
+          privateKey = privateKey.slice(1, -1);
+        }
+        
+        // Substituir \n literal por quebra de linha real
+        privateKey = privateKey.replace(/\\n/g, '\n');
+        
+        // Se não tem quebras de linha, pode estar tudo em uma linha - isso é OK
+        // A chave deve começar com -----BEGIN e terminar com -----END
+        
+        if (!privateKey.includes('BEGIN PRIVATE KEY')) {
+          throw new Error('FIREBASE_ADMIN_PRIVATE_KEY inválida: não contém BEGIN PRIVATE KEY');
+        }
+        
+        if (!privateKey.includes('END PRIVATE KEY')) {
+          throw new Error('FIREBASE_ADMIN_PRIVATE_KEY inválida: não contém END PRIVATE KEY');
+        }
+        
         credential = admin.credential.cert({
           projectId: FIREBASE_PROJECT_ID,
           clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
-          privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY.replace(/\\n/g, '\n'),
+          privateKey: privateKey,
         });
         console.log('✅ Firebase Admin inicializado via variáveis de ambiente (Vercel)');
       } else {
