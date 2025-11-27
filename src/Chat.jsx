@@ -11,6 +11,11 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
   const messagesEndRef = useRef(null);
   const conversationRef = useRef(null); // Para armazenar a referência do documento da conversa
 
+  // Debug: verificar se o componente está sendo renderizado
+  useEffect(() => {
+    console.log('💬 FloatingChat renderizado:', { clientId, salonId });
+  }, [clientId, salonId]);
+
   // Scroll para o final das mensagens
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -145,10 +150,10 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
       <button
         onClick={() => setIsOpen(!isOpen)}
         style={{
-          position: 'fixed',
+          position: 'absolute', // Mudado de fixed para absolute para funcionar dentro do container
           bottom: '20px',
           right: '20px',
-          backgroundColor: '#6B46C1', // Cor roxa
+          backgroundColor: '#ec4899', // Cor rosa para combinar com o tema
           color: 'white',
           borderRadius: '50%',
           width: '56px',
@@ -156,11 +161,20 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.2)',
-          zIndex: 1000,
+          boxShadow: '0px 4px 20px rgba(236, 72, 153, 0.4)',
+          zIndex: 9999, // Z-index muito alto para aparecer acima de tudo
           border: 'none',
           cursor: 'pointer',
           fontSize: '24px',
+          transition: 'all 0.3s ease',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.1)';
+          e.currentTarget.style.boxShadow = '0px 6px 25px rgba(236, 72, 153, 0.6)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)';
+          e.currentTarget.style.boxShadow = '0px 4px 20px rgba(236, 72, 153, 0.4)';
         }}
       >
         {isOpen ? '✕' : '💬'}
@@ -170,13 +184,13 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
       {isOpen && (
         <div
           style={{
-            position: 'fixed',
+            position: 'absolute', // Mudado de fixed para absolute
             top: 0,
             left: 0,
             width: '100%',
             height: '100%',
             backgroundColor: 'white',
-            zIndex: 999,
+            zIndex: 9998, // Abaixo do botão mas acima de tudo
             display: 'flex',
             flexDirection: 'column',
           }}

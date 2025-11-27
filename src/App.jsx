@@ -2906,6 +2906,15 @@ export default function App() {
                 <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-36 h-7 bg-gray-900 rounded-b-[28px] z-50 shadow-xl"></div>
 
                 <div className="flex-1 overflow-hidden relative bg-white">
+                    {/* Chat com IA - aparece quando cliente está na tela home do salão */}
+                    {view === 'client-home' && currentSalonId && (clientData || clientPhone) && (
+                        <FloatingChat
+                            clientId={(clientData?.phone || clientPhone || '').replace(/\D/g, '')}
+                            salonId={currentSalonId}
+                            setView={setView}
+                        />
+                    )}
+                    
                     {view === 'landing' && <LandingScreen setView={setView} />}
                     
                     {view === 'owner-login' && (
@@ -3070,15 +3079,6 @@ export default function App() {
                     )}
                 </div>
             </div>
-
-            {/* Chat com IA - aparece quando cliente está logado */}
-            {clientData && currentSalonId && (
-                <FloatingChat
-                    clientId={clientData.phone?.replace(/\D/g, '') || clientPhone.replace(/\D/g, '')}
-                    salonId={currentSalonId}
-                    setView={setView}
-                />
-            )}
         </div>
     );
 }
