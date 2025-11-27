@@ -77,7 +77,7 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
     const userMessage = {
       role: 'user',
       content: inputMessage.trim(),
-      timestamp: serverTimestamp(),
+      timestamp: new Date().toISOString(), // Usar ISO string ao invés de serverTimestamp() para arrays
     };
 
     const updatedMessages = [...messages, userMessage];
@@ -87,9 +87,16 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
 
     try {
       // Atualiza o Firestore com a mensagem do usuário
+      // Converter timestamps para objetos compatíveis com Firestore
+      const messagesForFirestore = updatedMessages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.timestamp || new Date().toISOString()
+      }));
+      
       await updateDoc(conversationRef.current, {
-        messages: updatedMessages,
-        lastUpdated: serverTimestamp(),
+        messages: messagesForFirestore,
+        lastUpdated: serverTimestamp(), // serverTimestamp() só para campos diretos
       });
 
       // Chama a Vercel Function
@@ -113,16 +120,23 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
       const botMessage = {
         role: 'bot',
         content: data.response,
-        timestamp: serverTimestamp(),
+        timestamp: new Date().toISOString(), // Usar ISO string ao invés de serverTimestamp() para arrays
       };
 
       const finalMessages = [...updatedMessages, botMessage];
       setMessages(finalMessages);
 
       // Atualiza o Firestore com a resposta do bot
+      // Converter timestamps para objetos compatíveis com Firestore
+      const finalMessagesForFirestore = finalMessages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.timestamp || new Date().toISOString()
+      }));
+      
       await updateDoc(conversationRef.current, {
-        messages: finalMessages,
-        lastUpdated: serverTimestamp(),
+        messages: finalMessagesForFirestore,
+        lastUpdated: serverTimestamp(), // serverTimestamp() só para campos diretos
       });
 
       // Lidar com ações do bot (ex: agendamento confirmado)
@@ -134,7 +148,11 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
 
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);
-      setMessages(prev => [...prev, { role: 'bot', content: 'Desculpe, houve um erro. Tente novamente.', timestamp: serverTimestamp() }]);
+      setMessages(prev => [...prev, { 
+        role: 'bot', 
+        content: 'Desculpe, houve um erro. Tente novamente.', 
+        timestamp: new Date().toISOString() 
+      }]);
     } finally {
       setIsLoading(false);
     }
@@ -200,25 +218,37 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
           {/* Header do Chat */}
           <div
             style={{
-              backgroundColor: '#6B46C1',
+              backgroundColor: '#ec4899',
               color: 'white',
               padding: '16px',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
               boxShadow: '0px 2px 5px rgba(0, 0, 0, 0.1)',
+              position: 'relative',
+              zIndex: 1,
             }}
           >
-            <h2 style={{ fontSize: '1.25rem', margin: 0 }}>La Vie Beauty Chat</h2>
+            <h2 style={{ fontSize: '1.25rem', margin: 0, flex: 1 }}>La Vie Beauty Chat</h2>
             <button
               onClick={() => setIsOpen(false)}
               style={{
-                backgroundColor: 'transparent',
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
                 border: 'none',
                 color: 'white',
                 fontSize: '1.5rem',
                 cursor: 'pointer',
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'background-color 0.2s',
+                flexShrink: 0,
               }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
             >
               ✕
             </button>
@@ -276,6 +306,8 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
               borderTop: '1px solid #E2E8F0',
               display: 'flex',
               gap: '10px',
+              position: 'relative',
+              zIndex: 1,
             }}
           >
             <input
@@ -286,7 +318,7 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
               placeholder="Digite sua mensagem..."
               style={{
                 flexGrow: 1,
-                padding: '12px',
+                padding: '12px 16px',
                 borderRadius: '25px',
                 border: '1px solid #CBD5E0',
                 fontSize: '1rem',
@@ -297,20 +329,24 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
             <button
               onClick={sendMessage}
               style={{
-                backgroundColor: '#6B46C1',
+                backgroundColor: '#ec4899',
                 color: 'white',
                 borderRadius: '25px',
                 padding: '12px 20px',
                 border: 'none',
-                cursor: 'pointer',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
                 fontSize: '1rem',
                 fontWeight: 'bold',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 opacity: isLoading ? 0.7 : 1,
+                flexShrink: 0,
+                transition: 'opacity 0.2s, transform 0.1s',
               }}
               disabled={isLoading}
+              onMouseEnter={(e) => !isLoading && (e.currentTarget.style.transform = 'scale(1.05)')}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
             >
               Enviar
             </button>
