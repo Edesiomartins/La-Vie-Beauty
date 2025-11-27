@@ -100,7 +100,13 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
       });
 
       // Chama a Vercel Function
-      const response = await fetch('/api/chat', {
+      // Em desenvolvimento, usar localhost:3000 se Vercel CLI estiver rodando
+      // Em produção, usar a URL relativa
+      const apiUrl = import.meta.env.DEV 
+        ? 'http://localhost:3000/api/chat' 
+        : '/api/chat';
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
