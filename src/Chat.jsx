@@ -172,39 +172,41 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
 
   return (
     <>
-      {/* Botão flutuante */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        style={{
-          position: 'absolute', // Mudado de fixed para absolute para funcionar dentro do container
-          bottom: '20px',
-          right: '20px',
-          backgroundColor: '#ec4899', // Cor rosa para combinar com o tema
-          color: 'white',
-          borderRadius: '50%',
-          width: '56px',
-          height: '56px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0px 4px 20px rgba(236, 72, 153, 0.4)',
-          zIndex: 9999, // Z-index muito alto para aparecer acima de tudo
-          border: 'none',
-          cursor: 'pointer',
-          fontSize: '24px',
-          transition: 'all 0.3s ease',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'scale(1.1)';
-          e.currentTarget.style.boxShadow = '0px 6px 25px rgba(236, 72, 153, 0.6)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'scale(1)';
-          e.currentTarget.style.boxShadow = '0px 4px 20px rgba(236, 72, 153, 0.4)';
-        }}
-      >
-        {isOpen ? '✕' : '💬'}
-      </button>
+      {/* Botão flutuante - só aparece quando o chat está fechado */}
+      {!isOpen && (
+        <button
+          onClick={() => setIsOpen(true)}
+          style={{
+            position: 'absolute', // Mudado de fixed para absolute para funcionar dentro do container
+            bottom: '20px',
+            right: '20px',
+            backgroundColor: '#ec4899', // Cor rosa para combinar com o tema
+            color: 'white',
+            borderRadius: '50%',
+            width: '56px',
+            height: '56px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0px 4px 20px rgba(236, 72, 153, 0.4)',
+            zIndex: 9999, // Z-index muito alto para aparecer acima de tudo
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '24px',
+            transition: 'all 0.3s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.1)';
+            e.currentTarget.style.boxShadow = '0px 6px 25px rgba(236, 72, 153, 0.6)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.boxShadow = '0px 4px 20px rgba(236, 72, 153, 0.4)';
+          }}
+        >
+          💬
+        </button>
+      )}
 
       {/* Modal do Chat */}
       {isOpen && (
