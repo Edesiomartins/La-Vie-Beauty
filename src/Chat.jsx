@@ -125,7 +125,7 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
       const data = await response.json();
       const botMessage = {
         role: 'bot',
-        content: data.response,
+        content: data.content || data.response || 'Desculpe, não consegui processar sua mensagem.',
         timestamp: new Date().toISOString(), // Usar ISO string ao invés de serverTimestamp() para arrays
       };
 

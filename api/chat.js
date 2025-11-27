@@ -1,247 +1,180 @@
-// api/chat.js - Vercel Serverless Function
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import admin from 'firebase-admin';
-import { readFileSync } from 'fs';
-import { join } from 'path';
 
-// Project ID do Firebase (mesmo do firebaseConfig.js)
-const FIREBASE_PROJECT_ID = process.env.FIREBASE_ADMIN_PROJECT_ID || 'la-vie---coiffeur';
-
-// Inicializa Firebase Admin SDK (apenas uma vez)
+// CONFIGURAÇÃO DO FIREBASE ADMIN
+// Verifica se já existe uma instância para evitar erro de "Duplicate App" no hot-reload
 if (!admin.apps.length) {
   try {
-    let credential;
+    // AJUSTADO: Agora busca tanto com o prefixo _ADMIN quanto sem, para garantir compatibilidade com sua Vercel
+    const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || 'la-vie---coiffeur';
+    const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL || process.env.FIREBASE_CLIENT_EMAIL;
+    const privateKeyRaw = process.env.FIREBASE_ADMIN_PRIVATE_KEY || process.env.FIREBASE_PRIVATE_KEY;
 
-    // Opção 1: Tentar usar arquivo JSON (desenvolvimento local)
-    try {
-      const serviceAccountPath = join(process.cwd(), 'serviceAccountKey.json');
-      const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
-      credential = admin.credential.cert(serviceAccount);
-      console.log('✅ Firebase Admin inicializado via arquivo JSON (desenvolvimento local)');
-    } catch (fileError) {
-      // Opção 2: Usar variáveis de ambiente (produção Vercel)
-      if (process.env.FIREBASE_ADMIN_CLIENT_EMAIL && process.env.FIREBASE_ADMIN_PRIVATE_KEY) {
-        // Processar a chave privada - pode vir com \n literal ou quebras de linha reais
-        let privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY;
-        
-        // Se a chave começa e termina com aspas, removê-las
-        if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
-          privateKey = privateKey.slice(1, -1);
-        }
-        if (privateKey.startsWith("'") && privateKey.endsWith("'")) {
-          privateKey = privateKey.slice(1, -1);
-        }
-        
-        // Substituir \n literal por quebra de linha real
-        privateKey = privateKey.replace(/\\n/g, '\n');
-        
-        // Se não tem quebras de linha, pode estar tudo em uma linha - isso é OK
-        // A chave deve começar com -----BEGIN e terminar com -----END
-        
-        if (!privateKey.includes('BEGIN PRIVATE KEY')) {
-          throw new Error('FIREBASE_ADMIN_PRIVATE_KEY inválida: não contém BEGIN PRIVATE KEY');
-        }
-        
-        if (!privateKey.includes('END PRIVATE KEY')) {
-          throw new Error('FIREBASE_ADMIN_PRIVATE_KEY inválida: não contém END PRIVATE KEY');
-        }
-        
-        credential = admin.credential.cert({
-          projectId: FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
-          privateKey: privateKey,
-        });
-        console.log('✅ Firebase Admin inicializado via variáveis de ambiente (Vercel)');
-      } else {
-        throw new Error('Firebase Admin: Nenhuma credencial encontrada. Configure serviceAccountKey.json ou variáveis de ambiente.');
-      }
+    // Verificação crítica das variáveis
+    if (!clientEmail || !privateKeyRaw) {
+      throw new Error('Faltam credenciais do Firebase (FIREBASE_ADMIN_CLIENT_EMAIL ou FIREBASE_ADMIN_PRIVATE_KEY)');
+    }
+
+    // TRATAMENTO DA CHAVE PRIVADA (A parte mais importante para o erro DECODER)
+    // 1. Remove aspas duplas no início e fim, se houver (comum ao copiar de .env)
+    let privateKey = privateKeyRaw.replace(/^"|"$/g, '');
+    
+    // 2. Substitui o literal "\n" por quebras de linha reais
+    // Isso conserta o erro "DECODER routines::unsupported"
+    if (privateKey.includes('\\n')) {
+      privateKey = privateKey.replace(/\\n/g, '\n');
     }
 
     admin.initializeApp({
-      credential: credential,
+      credential: admin.credential.cert({
+        projectId: projectId,
+        clientEmail: clientEmail,
+        privateKey: privateKey,
+      }),
     });
+    
+    console.log('✅ Firebase Admin inicializado com sucesso!');
+
   } catch (error) {
-    console.error('❌ Firebase admin initialization error:', error.message);
-    throw error;
+    console.error('❌ Erro fatal na inicialização do Firebase Admin:', error.message);
+    // Não damos throw aqui para permitir que a função retorne um erro 500 JSON limpo
   }
 }
 
 const db = admin.firestore();
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+
+// CONFIGURAÇÃO GEMINI
+// Inicializa fora do handler para reutilizar conexão se possível
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export default async function handler(req, res) {
-  // CORS headers para permitir requisições do frontend
+  // 1. Configuração de CORS (Essencial para o frontend chamar esta API)
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
+  // Responde imediatamente a requisições pre-flight
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method Not Allowed' });
-  }
-
-  const { message, clientId, salonId, conversationId, history } = req.body;
-
-  if (!message || !clientId || !salonId || !conversationId) {
-    return res.status(400).json({ message: 'Missing required fields' });
+    return res.status(405).json({ message: 'Método não permitido' });
   }
 
   try {
-    // Verificar se as variáveis de ambiente estão configuradas
+    // 2. Validações Iniciais
     if (!process.env.GEMINI_API_KEY) {
-      console.error('❌ GEMINI_API_KEY não configurada');
-      return res.status(500).json({ 
-        message: 'Erro de configuração: GEMINI_API_KEY não encontrada',
-        error: 'GEMINI_API_KEY não está configurada nas variáveis de ambiente'
-      });
+      throw new Error('GEMINI_API_KEY não configurada no servidor.');
+    }
+    
+    // Se o Firebase falhou ao iniciar lá em cima
+    if (!admin.apps.length) {
+      throw new Error('Firebase Admin não foi inicializado corretamente. Verifique os logs do servidor.');
     }
 
-    // 1. Buscar serviços do Firestore para contexto da IA
-    let availableServices = [];
+    const { message, history, salonId, clientId, conversationId } = req.body;
+
+    if (!message) {
+      return res.status(400).json({ message: 'Mensagem é obrigatória.' });
+    }
+
+    // conversationId é opcional, mas útil para logs
+    if (conversationId) {
+      console.log(`💬 Conversa: ${conversationId}, Cliente: ${clientId}, Salão: ${salonId}`);
+    }
+
+    // 3. Buscar Contexto (Serviços) no Firestore
+    // Usamos um array vazio como fallback se o banco falhar, para o chat não travar
+    let servicesText = "Serviços indisponíveis no momento.";
+    let servicesList = [];
+    
     try {
-      const servicesSnapshot = await db.collection('services').get();
-      availableServices = servicesSnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          name: data.nome || data.name || '',
-          description: data.descricao || data.description || '',
-          price: data.preco || data.price || 0,
-          duration: data.duracao || data.duration_minutes || 0,
-        };
-      });
-    } catch (firestoreError) {
-      console.error('❌ Erro ao buscar serviços do Firestore:', firestoreError);
-      // Continuar mesmo sem serviços, mas logar o erro
+      const servicesRef = db.collection('services'); // Ajuste se sua coleção tiver outro nome
+      const snapshot = await servicesRef.get();
+      
+      if (!snapshot.empty) {
+        servicesList = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                name: data.name || data.nome,
+                price: data.price || data.preco,
+                duration: data.duration || data.duracao
+            };
+        });
+        
+        servicesText = servicesList.map(s => 
+          `- ${s.name} (R$ ${s.price}, ${s.duration} min)`
+        ).join('\n');
+      }
+    } catch (dbError) {
+      console.error('⚠️ Erro ao buscar serviços (continuando sem contexto):', dbError.message);
     }
 
-    const serviceNames = availableServices.length > 0 
-      ? availableServices.map(s => s.name).join(', ')
-      : 'Nenhum serviço disponível no momento';
+    // 4. Montar o Prompt para o Gemini
+    // Usando gemini-1.5-flash que é mais rápido e eficiente para chat
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' }); 
 
-    // 2. Construir o prompt para o Gemini
-    const chatHistory = history.map(msg => ({
-      role: msg.role === 'user' ? 'user' : 'model', // Gemini usa 'user' e 'model'
-      parts: [{ text: msg.content }],
-    }));
+    const systemInstruction = `
+      Você é a "Vie", assistente virtual do salão de beleza La Vie Coiffeur.
+      Seu tom é elegante, acolhedor e profissional.
+      
+      CONTEXTO DO SALÃO:
+      Serviços disponíveis:
+      ${servicesText}
 
-    const prompt = `
-      Você é um assistente de agendamento amigável e prestativo para o salão La Vie Beauty.
-      Seu objetivo principal é ajudar os clientes a agendar serviços.
-      Serviços disponíveis no salão: ${serviceNames}.
-      
-      Instruções para a resposta:
-      - Se o usuário expressar claramente a intenção de agendar um serviço e você tiver informações suficientes (serviço, data, hora), responda APENAS com um objeto JSON no formato:
-        \`\`\`json
-        { "action": "suggest_booking", "service": "nome_do_servico", "date": "YYYY-MM-DD", "time": "HH:MM" }
-        \`\`\`
-        Certifique-se de que o "service" corresponda a um dos serviços disponíveis. Se a data ou hora não forem específicas, peça mais detalhes.
-      - Se o usuário perguntar sobre serviços, liste alguns dos serviços disponíveis e seus preços/durações.
-      - Se o usuário confirmar um agendamento sugerido, responda APENAS com um objeto JSON no formato:
-        \`\`\`json
-        { "action": "confirm_booking", "service": "nome_do_servico", "date": "YYYY-MM-DD", "time": "HH:MM" }
-        \`\`\`
-      - Para outras perguntas ou conversas gerais, responda de forma natural e útil, sempre direcionando para o agendamento de serviços.
-      - Mantenha as respostas concisas e em português.
-      
-      Histórico da conversa:
-      ${JSON.stringify(chatHistory)}
-      
-      Mensagem atual do usuário: "${message}"
+      REGRAS:
+      1. Se o cliente quiser agendar, pergunte: Qual serviço? Qual data/horário preferido?
+      2. Se o cliente confirmar um horário explicitamente, responda com um JSON oculto para o frontend processar.
+         Formato: @AGENDAR|{"service": "Nome", "date": "YYYY-MM-DD", "time": "HH:mm"}
+      3. Responda de forma concisa (máximo 2 ou 3 frases por vez).
+      4. O cliente atual tem o ID: ${clientId}.
     `;
 
-    // Chamar Gemini API
-    let geminiResponseText;
-    try {
-      const result = await model.startChat({ history: chatHistory }).sendMessage(message);
-      geminiResponseText = result.response.text();
-    } catch (geminiError) {
-      console.error('❌ Erro ao chamar Gemini API:', geminiError);
-      return res.status(500).json({ 
-        message: 'Erro ao processar mensagem com IA',
-        error: geminiError.message 
-      });
-    }
+    // Converte histórico simples para formato do Gemini
+    // Nota: O Gemini espera { role: 'user' | 'model', parts: [{ text: '...' }] }
+    const chatHistory = (history || []).map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.content }]
+    }));
 
-    let botResponse = geminiResponseText;
-    let action = 'none';
+    const chat = model.startChat({
+      history: chatHistory,
+      systemInstruction: systemInstruction 
+    });
+
+    const result = await chat.sendMessage(message);
+    const responseText = result.response.text();
+
+    // 5. Processar resposta para detectar ações (ex: agendamento)
+    let action = null;
     let bookingData = null;
-
-    // Tentar parsear a resposta como JSON para ações
-    try {
-      // Extrair JSON do texto se estiver dentro de ```json ... ```
-      let jsonText = geminiResponseText;
-      const jsonMatch = jsonText.match(/```json\s*([\s\S]*?)\s*```/);
-      if (jsonMatch) {
-        jsonText = jsonMatch[1];
+    
+    // Verificar se a resposta contém comando de agendamento
+    const bookingMatch = responseText.match(/@AGENDAR\|({.*?})/);
+    if (bookingMatch) {
+      try {
+        bookingData = JSON.parse(bookingMatch[1]);
+        action = 'suggest_booking';
+        console.log('📅 Agendamento sugerido:', bookingData);
+      } catch (e) {
+        console.error('Erro ao parsear JSON de agendamento:', e);
       }
-
-      const parsedResponse = JSON.parse(jsonText);
-      
-      if (parsedResponse.action === 'suggest_booking' || parsedResponse.action === 'confirm_booking') {
-        action = parsedResponse.action;
-        bookingData = parsedResponse;
-
-        // Validar serviço
-        const matchedService = availableServices.find(s => 
-          s.name.toLowerCase() === bookingData.service.toLowerCase()
-        );
-
-        if (!matchedService) {
-          botResponse = `Desculpe, não encontrei o serviço "${bookingData.service}". Os serviços disponíveis são: ${serviceNames}.`;
-          action = 'none';
-          bookingData = null;
-        } else {
-          bookingData.serviceId = matchedService.id;
-
-          if (action === 'suggest_booking') {
-            botResponse = `Entendi! Você gostaria de agendar "${bookingData.service}" para ${bookingData.date} às ${bookingData.time}? Posso confirmar para você?`;
-          } else if (action === 'confirm_booking') {
-            // Criar agendamento no Firestore
-            // Nota: Ajuste a coleção conforme sua estrutura (pode ser 'salons/{salonId}/appointments')
-            const appointmentsRef = db.collection('salons').doc(salonId).collection('appointments');
-            const newBookingRef = await appointmentsRef.add({
-              clientId,
-              salonId,
-              serviceId: bookingData.serviceId,
-              serviceName: matchedService.name,
-              date: bookingData.date,
-              time: bookingData.time,
-              status: 'confirmado',
-              createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            });
-
-            bookingData.id = newBookingRef.id;
-            botResponse = `Ótimo! Seu agendamento para "${bookingData.service}" em ${bookingData.date} às ${bookingData.time} foi confirmado com sucesso! ID do agendamento: ${newBookingRef.id}.`;
-            action = 'booking_confirmed';
-          }
-        }
-      }
-    } catch (e) {
-      // Não é um JSON, é uma resposta de texto normal
-      console.log('Gemini response was not JSON for action, treating as text.');
     }
 
-    return res.status(200).json({ response: botResponse, action, bookingData });
+    // 6. Retorno
+    return res.status(200).json({
+      role: 'assistant',
+      content: responseText,
+      ...(action && { action }),
+      ...(bookingData && { bookingData })
+    });
+
   } catch (error) {
-    console.error('❌ Erro na Vercel Function:', error);
-    console.error('❌ Stack trace:', error.stack);
-    console.error('❌ Request body:', JSON.stringify(req.body, null, 2));
-    
-    // Retornar erro mais detalhado em desenvolvimento
-    const errorMessage = process.env.NODE_ENV === 'development' 
-      ? error.message 
-      : 'Erro interno do servidor';
-    
+    console.error('❌ Erro na API Chat:', error);
     return res.status(500).json({ 
-      message: 'Erro interno do servidor', 
-      error: errorMessage,
-      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+      message: 'Erro interno ao processar mensagem.',
+      error: error.message 
     });
   }
 }
-
