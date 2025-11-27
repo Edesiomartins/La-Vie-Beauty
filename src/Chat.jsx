@@ -233,7 +233,7 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
               alignItems: 'center',
               boxShadow: '0px 2px 5px rgba(0, 0, 0, 0.1)',
               position: 'relative',
-              zIndex: 1,
+              zIndex: 1, // Header com z-index baixo
               flexShrink: 0, // Não encolher
             }}
           >
@@ -255,7 +255,7 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
                 transition: 'background-color 0.2s',
                 flexShrink: 0,
                 position: 'relative',
-                zIndex: 1, // Mesmo nível do header
+                zIndex: 1, // Mesmo nível do header (baixo)
               }}
               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
@@ -317,9 +317,11 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
               borderTop: '1px solid #E2E8F0',
               display: 'flex',
               gap: '10px',
-              position: 'relative',
-              zIndex: 10, // Maior que o header para ficar acima
+              position: 'sticky', // Mudado para sticky para garantir que fique no fundo
+              bottom: 0,
+              zIndex: 100, // Z-index muito alto para ficar acima de tudo
               flexShrink: 0, // Não encolher
+              boxShadow: '0px -2px 10px rgba(0, 0, 0, 0.1)', // Sombra para destacar
             }}
           >
             <input
@@ -335,6 +337,8 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
                 border: '1px solid #CBD5E0',
                 fontSize: '1rem',
                 outline: 'none',
+                position: 'relative',
+                zIndex: 101, // Acima do container
               }}
               disabled={isLoading}
             />
@@ -355,6 +359,8 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
                 opacity: isLoading ? 0.7 : 1,
                 flexShrink: 0,
                 transition: 'opacity 0.2s, transform 0.1s',
+                position: 'relative',
+                zIndex: 102, // Z-index mais alto que o input
               }}
               disabled={isLoading}
               onMouseEnter={(e) => !isLoading && (e.currentTarget.style.transform = 'scale(1.05)')}
