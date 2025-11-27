@@ -1923,14 +1923,17 @@ const AdminScreen = ({
 }) => (
     <div className="flex flex-col h-full bg-gradient-to-b from-gray-50 to-white">
         <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6 pt-12 pb-8 rounded-b-[40px] shadow-2xl">
-            <div className="flex justify-between items-center text-white mb-6">
-                <div>
-                    <h2 className="text-2xl font-black mb-1">{salonData?.name}</h2>
-                    <p className="text-gray-400 text-xs flex items-center gap-1">
-                        <Settings size={12} />
-                        Painel Administrativo
-                    </p>
-                </div>
+            {/* Título centralizado no topo */}
+            <div className="text-center mb-4">
+                <h1 className="text-xl font-black text-white mb-1 flex items-center justify-center gap-2">
+                    <Settings size={18} />
+                    Painel Administrativo
+                </h1>
+                <p className="text-gray-300 text-sm">{salonData?.name}</p>
+            </div>
+
+            {/* Botões de navegação e sair */}
+            <div className="flex justify-between items-center mb-6">
                 <div className="flex gap-2">
                     <button
                         onClick={() => setView('client-management')}
@@ -1948,10 +1951,14 @@ const AdminScreen = ({
                     <button onClick={() => setView('settings')} className="bg-white/10 backdrop-blur-sm p-3 rounded-2xl hover:bg-white/20 transition-all" title="Configurações">
                         <Settings size={20} />
                     </button>
-                    <button onClick={() => {setCurrentSalonId(null); setView('landing')}} className="bg-white/10 backdrop-blur-sm p-3 rounded-2xl hover:bg-white/20 transition-all" title="Sair">
-                        <LogOut size={20} />
-                    </button>
                 </div>
+                <button 
+                    onClick={() => {setCurrentSalonId(null); setView('landing')}} 
+                    className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-lg"
+                >
+                    <LogOut size={18} />
+                    Sair
+                </button>
             </div>
 
             <div className="flex gap-3">
