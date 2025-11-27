@@ -38,6 +38,9 @@ import {
 import { db } from './firebaseConfig';
 import { collection, getDocs, addDoc, query, where, onSnapshot, doc, setDoc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 
+// Importação do Chat
+import FloatingChat from './Chat';
+
 const TIME_SLOTS = ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
 
 // Função para formatar telefone
@@ -3067,6 +3070,15 @@ export default function App() {
                     )}
                 </div>
             </div>
+
+            {/* Chat com IA - aparece quando cliente está logado */}
+            {clientData && currentSalonId && (
+                <FloatingChat
+                    clientId={clientData.phone?.replace(/\D/g, '') || clientPhone.replace(/\D/g, '')}
+                    salonId={currentSalonId}
+                    setView={setView}
+                />
+            )}
         </div>
     );
 }

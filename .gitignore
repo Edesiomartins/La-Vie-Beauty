@@ -69,4 +69,5 @@ android/app/src/main/res/xml/config.xml
 .firebase/
 firebase-debug.log
 firestore-debug.log
+serviceAccountKey.json
 
