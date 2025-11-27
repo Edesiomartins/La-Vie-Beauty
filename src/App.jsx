@@ -1,4 +1,4 @@
-// @ts-nocheck
+﻿// @ts-nocheck
 import React, { useState, useEffect } from 'react';
 import {
     Calendar,
@@ -30,7 +30,8 @@ import {
     Edit,
     Trash2,
     Mail,
-    LogIn
+    LogIn,
+    Lock
 } from 'lucide-react';
 
 // Importações do Firebase
@@ -58,6 +59,39 @@ const formatPhone = (value) => {
         return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
     } else {
         return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
+    }
+};
+
+const INITIAL_OWNER_FORM = {
+    name: '',
+    address: '',
+    phone: '(   ) ',
+    email: '',
+    securityCode: '',
+    confirmSecurityCode: ''
+};
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const hashSecurityCode = async (code) => {
+    const clean = (code || '').trim();
+    if (!clean) return '';
+
+    try {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(clean);
+        const subtle = globalThis.crypto?.subtle;
+
+        if (!subtle) {
+            return btoa(clean).split('').reverse().join('');
+        }
+
+        const hashBuffer = await subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch (error) {
+        console.error('Erro ao gerar hash do PIN:', error);
+        return clean;
     }
 };
 
@@ -243,7 +277,7 @@ const OwnerLoginScreen = ({
                 <div className="bg-gradient-to-br from-gray-900 to-gray-800 p-6 pt-12 pb-8 rounded-b-[32px] shadow-xl">
                     <button onClick={() => {
                         setShowRegistration(false);
-                        setOwnerForm({ name: '', address: '', phone: '(   ) ' });
+                        setOwnerForm(INITIAL_OWNER_FORM);
                     }} className="text-white/80 hover:text-white mb-4 flex items-center gap-2 text-sm">
                         <X size={18} />
                         Voltar
@@ -321,10 +355,22 @@ const OwnerLoginScreen = ({
                     formatPhone={true}
                 />
 
+                <InputField
+                    label="Código de Segurança (PIN)"
+                    icon={Lock}
+                    type="password"
+                    value={ownerForm.securityCode}
+                    onChange={e => {
+                        const digits = e.target.value.replace(/\D/g, '').slice(0, 6);
+                        setOwnerForm({...ownerForm, securityCode: digits});
+                    }}
+                    placeholder="Digite seu PIN"
+                />
+
                 <div className="bg-blue-50 p-4 rounded-xl flex gap-3">
                     <Sparkles className="text-blue-500 mt-0.5" size={18} />
                     <p className="text-xs text-blue-700 leading-relaxed">
-                        Digite o telefone cadastrado do seu salão. Se ainda não tem cadastro, você poderá criar um novo.
+                        Digite o telefone e o PIN cadastrados do seu salão. Se ainda não tem cadastro, crie um novo e defina seu PIN.
                     </p>
                 </div>
             </div>
@@ -333,14 +379,18 @@ const OwnerLoginScreen = ({
                 <Button 
                     onClick={handleOwnerLogin} 
                     loading={loading}
-                    disabled={!ownerForm.phone.trim() || ownerForm.phone.length < 10}
+                    disabled={
+                        !ownerForm.phone.trim() ||
+                        ownerForm.phone.length < 10 ||
+                        ownerForm.securityCode.length < 4
+                    }
                 >
                     <LogIn size={20} />
                     Acessar Painel
                 </Button>
                 <button
                     onClick={() => {
-                        setOwnerForm({ name: '', address: '', phone: '(   ) ' });
+                        setOwnerForm(INITIAL_OWNER_FORM);
                         setView('owner-registration');
                     }}
                     className="w-full text-center text-gray-600 text-sm hover:text-gray-800 transition-colors"
@@ -387,12 +437,45 @@ const OwnerRegistrationScreen = ({
             />
 
             <InputField
+                label="E-mail do Responsável"
+                icon={Mail}
+                type="email"
+                value={ownerForm.email}
+                onChange={e => setOwnerForm({...ownerForm, email: e.target.value})}
+                placeholder="voce@empresa.com"
+            />
+
+            <InputField
                 label="Telefone / WhatsApp"
                 icon={Phone}
                 value={ownerForm.phone}
                 onChange={e => setOwnerForm({...ownerForm, phone: e.target.value})}
                 placeholder="(   ) 99999-9999"
                 formatPhone={true}
+            />
+
+            <InputField
+                label="Crie um Código de Segurança (PIN)"
+                icon={Lock}
+                type="password"
+                value={ownerForm.securityCode}
+                onChange={e => {
+                    const digits = e.target.value.replace(/\D/g, '').slice(0, 6);
+                    setOwnerForm({...ownerForm, securityCode: digits});
+                }}
+                placeholder="Ex: 123456"
+            />
+
+            <InputField
+                label="Confirme o Código"
+                icon={Lock}
+                type="password"
+                value={ownerForm.confirmSecurityCode}
+                onChange={e => {
+                    const digits = e.target.value.replace(/\D/g, '').slice(0, 6);
+                    setOwnerForm({...ownerForm, confirmSecurityCode: digits});
+                }}
+                placeholder="Repita seu PIN"
             />
 
             <div className="bg-blue-50 p-4 rounded-xl flex gap-3">
@@ -407,7 +490,15 @@ const OwnerRegistrationScreen = ({
             <Button 
                 onClick={handleOwnerRegistration} 
                 loading={loading}
-                disabled={!ownerForm.name.trim() || !ownerForm.address.trim() || !ownerForm.phone.trim()}
+                disabled={
+                    !ownerForm.name.trim() ||
+                    !ownerForm.address.trim() ||
+                    !ownerForm.phone.trim() ||
+                    !ownerForm.email.trim() ||
+                    !EMAIL_REGEX.test(ownerForm.email.trim()) ||
+                    ownerForm.securityCode.length < 4 ||
+                    ownerForm.securityCode !== ownerForm.confirmSecurityCode
+                }
             >
                 <CheckCircle size={20} />
                 Criar Meu Salão
@@ -827,6 +918,15 @@ const SettingsScreen = ({
                     value={editProfile.address}
                     placeholder="Rua das Flores, 123 - Centro"
                     onChange={e => setEditProfile({...editProfile, address: e.target.value})}
+                />
+
+                <InputField
+                    label="E-mail de Contato"
+                    icon={Mail}
+                    type="email"
+                    value={editProfile.email}
+                    placeholder="contato@salon.com"
+                    onChange={e => setEditProfile({...editProfile, email: e.target.value})}
                 />
 
                 <InputField
@@ -1640,6 +1740,7 @@ const ClientManagementScreen = ({
     setShowClientForm,
     handleDeleteClient,
     setEditingClient,
+    setClientForm,
     loading
 }) => (
     <div className="flex flex-col h-full bg-gradient-to-b from-gray-50 to-white">
@@ -1657,6 +1758,7 @@ const ClientManagementScreen = ({
             <button
                 onClick={() => {
                     setEditingClient(null);
+                    setClientForm({ name: '', phone: '(   ) ', email: '' });
                     setShowClientForm(true);
                 }}
                 className="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white p-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:shadow-xl transition-all active:scale-95"
@@ -1830,7 +1932,11 @@ const AdminScreen = ({
                     </p>
                 </div>
                 <div className="flex gap-2">
-                    <button onClick={() => setView('client-management')} className="bg-white/10 backdrop-blur-sm p-3 rounded-2xl hover:bg-white/20 transition-all" title="Clientes">
+                    <button
+                        onClick={() => setView('client-management')}
+                        className="bg-pink-500 text-white p-3 rounded-2xl shadow-lg hover:bg-pink-600 transition-all"
+                        title="Clientes"
+                    >
                         <User size={20} />
                     </button>
                     <button onClick={() => setView('collaborator-management')} className="bg-white/10 backdrop-blur-sm p-3 rounded-2xl hover:bg-white/20 transition-all" title="Colaboradores">
@@ -1970,14 +2076,11 @@ export default function App() {
         name: '',
         address: '',
         phone: '(   ) ',
+        email: '',
         googleCalendarId: ''
     });
 
-    const [ownerForm, setOwnerForm] = useState({
-        name: '',
-        address: '',
-        phone: '(   ) '
-    });
+    const [ownerForm, setOwnerForm] = useState(INITIAL_OWNER_FORM);
     const [showRegistration, setShowRegistration] = useState(false);
 
     const [allSalons, setAllSalons] = useState([]);
@@ -2059,6 +2162,11 @@ export default function App() {
             return;
         }
 
+        if (ownerForm.securityCode.length < 4) {
+            alert("⚠️ Informe seu PIN de segurança (mínimo 4 dígitos)");
+            return;
+        }
+
         setLoading(true);
         try {
             // Busca todos os salões e filtra por telefone
@@ -2074,13 +2182,26 @@ export default function App() {
             });
             
             if (foundSalon) {
-                // Encontrou salão - fazer login
+                const enteredHash = await hashSecurityCode(ownerForm.securityCode);
+                const salonRef = doc(db, "salons", foundSalon.id);
+
+                if (foundSalon.securityHash) {
+                    if (enteredHash !== foundSalon.securityHash) {
+                        alert("❌ PIN incorreto. Verifique e tente novamente.");
+                        return;
+                    }
+                } else {
+                    // Migração: salva um PIN para salões antigos sem segurança
+                    await updateDoc(salonRef, { securityHash: enteredHash });
+                }
+
                 setCurrentSalonId(foundSalon.id);
                 setSalonData(foundSalon);
                 setEditProfile({
                     name: foundSalon.name,
                     address: foundSalon.address,
                     phone: foundSalon.phone || '(   ) ',
+                    email: foundSalon.email || '',
                     googleCalendarId: foundSalon.googleCalendarId || ''
                 });
                 setUser({
@@ -2089,10 +2210,10 @@ export default function App() {
                     role: 'admin',
                     avatar: 'P'
                 });
+                setOwnerForm(INITIAL_OWNER_FORM);
                 setView('admin');
                 alert("✅ Login realizado com sucesso!");
             } else {
-                // Não encontrou - mostrar opção de cadastro
                 setShowRegistration(true);
                 alert("ℹ️ Salão não encontrado. Você pode criar um novo cadastro.");
             }
@@ -2110,18 +2231,36 @@ export default function App() {
             return;
         }
 
+        if (!ownerForm.email.trim() || !EMAIL_REGEX.test(ownerForm.email.trim())) {
+            alert("⚠️ Informe um e-mail válido");
+            return;
+        }
+
+        if (ownerForm.securityCode.length < 4) {
+            alert("⚠️ Crie um PIN com pelo menos 4 dígitos");
+            return;
+        }
+
+        if (ownerForm.securityCode !== ownerForm.confirmSecurityCode) {
+            alert("⚠️ O PIN e a confirmação não coincidem");
+            return;
+        }
+
         setLoading(true);
         const salonId = ownerForm.name.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Date.now();
 
         try {
+            const securityHash = await hashSecurityCode(ownerForm.securityCode);
             const newSalon = {
                 name: ownerForm.name,
                 address: ownerForm.address,
                 phone: ownerForm.phone,
+                email: ownerForm.email.trim(),
                 googleCalendarId: '',
                 plan: 'free_trial',
                 active: true,
-                createdAt: new Date().toISOString()
+                createdAt: new Date().toISOString(),
+                securityHash
             };
 
             await setDoc(doc(db, "salons", salonId), newSalon);
@@ -2132,6 +2271,7 @@ export default function App() {
                 name: newSalon.name,
                 address: newSalon.address,
                 phone: newSalon.phone || '(   ) ',
+                email: newSalon.email || '',
                 googleCalendarId: ''
             });
             setUser({
@@ -2140,6 +2280,7 @@ export default function App() {
                 role: 'admin',
                 avatar: 'P'
             });
+            setOwnerForm(INITIAL_OWNER_FORM);
             setShowRegistration(false);
             setView('admin');
             alert("✅ Salão cadastrado com sucesso!");
@@ -2260,6 +2401,12 @@ export default function App() {
 
     const handleSaveProfile = async () => {
         if (!currentSalonId) return;
+
+        if (editProfile.email && editProfile.email.trim() && !EMAIL_REGEX.test(editProfile.email.trim())) {
+            alert("⚠️ Informe um e-mail válido");
+            return;
+        }
+
         setLoading(true);
         try {
             const docRef = doc(db, "salons", currentSalonId);
@@ -2267,6 +2414,7 @@ export default function App() {
                 name: editProfile.name,
                 address: editProfile.address,
                 phone: editProfile.phone,
+                email: editProfile.email?.trim() || '',
                 googleCalendarId: editProfile.googleCalendarId
             });
             setSalonData({ ...salonData, ...editProfile });
@@ -2887,15 +3035,14 @@ export default function App() {
                         />
                     )}
 
-                    {/* Removido: Cadastro de clientes do admin - clientes se cadastram pelo link */}
-                    {/* Mantido apenas para referência futura se necessário */}
-                    {/* {view === 'client-management' && !showClientForm && (
+                    {view === 'client-management' && !showClientForm && (
                         <ClientManagementScreen
                             setView={setView}
                             clients={clients}
                             setShowClientForm={setShowClientForm}
                             handleDeleteClient={handleDeleteClient}
                             setEditingClient={setEditingClient}
+                            setClientForm={setClientForm}
                             loading={loading}
                         />
                     )}
@@ -2910,7 +3057,7 @@ export default function App() {
                             editingClient={editingClient}
                             setEditingClient={setEditingClient}
                         />
-                    )} */}
+                    )}
                 </div>
             </div>
         </div>

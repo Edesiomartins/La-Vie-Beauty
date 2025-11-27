@@ -3,11 +3,30 @@
   "appName": "La Vie Beauty",
   "webDir": "build",
   "bundledWebRuntime": false,
+  "backgroundColor": "#ec4899",
   "plugins": {
     "SplashScreen": {
       "launchShowDuration": 2000,
+      "launchAutoHide": true,
       "backgroundColor": "#ec4899",
-      "showSpinner": false
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false,
+      "splashFullScreen": true,
+      "splashImmersive": true
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#ec4899"
     }
+  },
+  "ios": {
+    "contentInset": "always",
+    "backgroundColor": "#ffffff"
+  },
+  "server": {
+    "hostname": "localhost",
+    "androidScheme": "https",
+    "iosScheme": "https"
   }
 }
