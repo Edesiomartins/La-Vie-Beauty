@@ -233,7 +233,7 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
               alignItems: 'center',
               boxShadow: '0px 2px 5px rgba(0, 0, 0, 0.1)',
               position: 'relative',
-              zIndex: 1, // Header com z-index baixo
+              zIndex: 0, // Header com z-index muito baixo (0)
               flexShrink: 0, // Não encolher
             }}
           >
@@ -255,7 +255,7 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
                 transition: 'background-color 0.2s',
                 flexShrink: 0,
                 position: 'relative',
-                zIndex: 1, // Mesmo nível do header (baixo)
+                zIndex: 0, // Z-index muito baixo (0) para ficar abaixo do footer
               }}
               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
@@ -319,7 +319,7 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
               gap: '10px',
               position: 'sticky', // Mudado para sticky para garantir que fique no fundo
               bottom: 0,
-              zIndex: 100, // Z-index muito alto para ficar acima de tudo
+              zIndex: 1000, // Z-index MUITO alto para ficar acima de TUDO (incluindo header)
               flexShrink: 0, // Não encolher
               boxShadow: '0px -2px 10px rgba(0, 0, 0, 0.1)', // Sombra para destacar
             }}
@@ -338,7 +338,7 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
                 fontSize: '1rem',
                 outline: 'none',
                 position: 'relative',
-                zIndex: 101, // Acima do container
+                zIndex: 1001, // Acima do container do footer
               }}
               disabled={isLoading}
             />
@@ -360,7 +360,7 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
                 flexShrink: 0,
                 transition: 'opacity 0.2s, transform 0.1s',
                 position: 'relative',
-                zIndex: 102, // Z-index mais alto que o input
+                zIndex: 1002, // Z-index MAIS ALTO que tudo (input, footer, header)
               }}
               disabled={isLoading}
               onMouseEnter={(e) => !isLoading && (e.currentTarget.style.transform = 'scale(1.05)')}
