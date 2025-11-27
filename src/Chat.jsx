@@ -213,6 +213,7 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
             zIndex: 9998, // Abaixo do botão mas acima de tudo
             display: 'flex',
             flexDirection: 'column',
+            overflow: 'hidden', // Prevenir overflow
           }}
         >
           {/* Header do Chat */}
@@ -227,6 +228,7 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
               boxShadow: '0px 2px 5px rgba(0, 0, 0, 0.1)',
               position: 'relative',
               zIndex: 1,
+              flexShrink: 0, // Não encolher
             }}
           >
             <h2 style={{ fontSize: '1.25rem', margin: 0, flex: 1 }}>La Vie Beauty Chat</h2>
@@ -236,7 +238,7 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
                 backgroundColor: 'rgba(255, 255, 255, 0.2)',
                 border: 'none',
                 color: 'white',
-                fontSize: '1.5rem',
+                fontSize: '1.2rem',
                 cursor: 'pointer',
                 width: '32px',
                 height: '32px',
@@ -246,6 +248,8 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
                 justifyContent: 'center',
                 transition: 'background-color 0.2s',
                 flexShrink: 0,
+                position: 'relative',
+                zIndex: 1, // Mesmo nível do header
               }}
               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)'}
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'}
@@ -264,6 +268,7 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
               flexDirection: 'column',
               gap: '10px',
               backgroundColor: '#f9f9f9',
+              minHeight: 0, // Permite que o flex funcione corretamente
             }}
           >
             {messages.map((msg, index) => (
@@ -307,7 +312,8 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
               display: 'flex',
               gap: '10px',
               position: 'relative',
-              zIndex: 1,
+              zIndex: 10, // Maior que o header para ficar acima
+              flexShrink: 0, // Não encolher
             }}
           >
             <input
