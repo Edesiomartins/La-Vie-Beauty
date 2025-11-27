@@ -243,7 +243,7 @@ const LandingScreen = ({ setView }) => (
                     <Store size={20} />
                     Sou Proprietário
                 </Button>
-                <Button onClick={() => setView('client-salon-selection')} variant="outline">
+                <Button onClick={() => setView('client-login')} variant="outline">
                     <User size={20} />
                     Sou Cliente
                 </Button>
@@ -2305,10 +2305,31 @@ export default function App() {
     const handleSelectSalon = async (salon) => {
         setCurrentSalonId(salon.id);
         setSalonData(salon);
-        setClientPhone('');
-        setClientName('');
-        setNeedsRegistration(false);
-        setView('client-login'); // ← MUDANÇA AQUI
+        
+        // Se cliente já está logado, ir direto para home
+        if (clientData || clientPhone) {
+            // Se cliente já existe neste salão, buscar dados
+            const phoneKey = (clientData?.phone || clientPhone || '').replace(/\D/g, '');
+            if (phoneKey) {
+                try {
+                    const clientRef = doc(db, "salons", salon.id, "clients", phoneKey);
+                    const clientDoc = await getDoc(clientRef);
+                    if (clientDoc.exists()) {
+                        const data = clientDoc.data();
+                        setClientData(data);
+                        await updateDoc(clientRef, {
+                            lastVisit: new Date().toISOString()
+                        });
+                    }
+                } catch (error) {
+                    console.error("Erro ao buscar cliente:", error);
+                }
+            }
+            setView('client-home');
+        } else {
+            // Se não está logado, ir para home (cliente já fez login antes)
+            setView('client-home');
+        }
     };
 
     const handleToggleService = async (service) => {
@@ -2529,6 +2550,45 @@ export default function App() {
         const phoneKey = clientPhone.replace(/\D/g, ''); // Remove formatação
 
         try {
+            // Se não tem salão selecionado, apenas salvar dados do cliente e ir para seleção de salões
+            if (!currentSalonId) {
+                // Salvar dados do cliente temporariamente
+                if (needsRegistration && clientName.trim()) {
+                    setClientData({
+                        name: clientName,
+                        phone: phoneKey,
+                        email: ''
+                    });
+                    setUser({
+                        id: phoneKey,
+                        name: clientName,
+                        phone: phoneKey,
+                        role: 'client',
+                        avatar: 'C'
+                    });
+                } else {
+                    // Cliente existente - apenas salvar dados temporários
+                    setClientData({
+                        name: clientName || 'Cliente',
+                        phone: phoneKey,
+                        email: ''
+                    });
+                    setUser({
+                        id: phoneKey,
+                        name: clientName || 'Cliente',
+                        phone: phoneKey,
+                        role: 'client',
+                        avatar: 'C'
+                    });
+                }
+                
+                setView('client-salon-selection');
+                setNeedsRegistration(false);
+                setLoading(false);
+                return;
+            }
+
+            // Se já tem salão selecionado, fazer login/cadastro no salão
             const clientRef = doc(db, "salons", currentSalonId, "clients", phoneKey);
             const clientDoc = await getDoc(clientRef);
 
