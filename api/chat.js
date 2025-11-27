@@ -66,20 +66,37 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. Buscar serviços do Firestore para contexto da IA
-    const servicesSnapshot = await db.collection('services').get();
-    const availableServices = servicesSnapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        name: data.nome || data.name || '',
-        description: data.descricao || data.description || '',
-        price: data.preco || data.price || 0,
-        duration: data.duracao || data.duration_minutes || 0,
-      };
-    });
+    // Verificar se as variáveis de ambiente estão configuradas
+    if (!process.env.GEMINI_API_KEY) {
+      console.error('❌ GEMINI_API_KEY não configurada');
+      return res.status(500).json({ 
+        message: 'Erro de configuração: GEMINI_API_KEY não encontrada',
+        error: 'GEMINI_API_KEY não está configurada nas variáveis de ambiente'
+      });
+    }
 
-    const serviceNames = availableServices.map(s => s.name).join(', ');
+    // 1. Buscar serviços do Firestore para contexto da IA
+    let availableServices = [];
+    try {
+      const servicesSnapshot = await db.collection('services').get();
+      availableServices = servicesSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.nome || data.name || '',
+          description: data.descricao || data.description || '',
+          price: data.preco || data.price || 0,
+          duration: data.duracao || data.duration_minutes || 0,
+        };
+      });
+    } catch (firestoreError) {
+      console.error('❌ Erro ao buscar serviços do Firestore:', firestoreError);
+      // Continuar mesmo sem serviços, mas logar o erro
+    }
+
+    const serviceNames = availableServices.length > 0 
+      ? availableServices.map(s => s.name).join(', ')
+      : 'Nenhum serviço disponível no momento';
 
     // 2. Construir o prompt para o Gemini
     const chatHistory = history.map(msg => ({
@@ -112,8 +129,18 @@ export default async function handler(req, res) {
       Mensagem atual do usuário: "${message}"
     `;
 
-    const result = await model.startChat({ history: chatHistory }).sendMessage(message);
-    const geminiResponseText = result.response.text();
+    // Chamar Gemini API
+    let geminiResponseText;
+    try {
+      const result = await model.startChat({ history: chatHistory }).sendMessage(message);
+      geminiResponseText = result.response.text();
+    } catch (geminiError) {
+      console.error('❌ Erro ao chamar Gemini API:', geminiError);
+      return res.status(500).json({ 
+        message: 'Erro ao processar mensagem com IA',
+        error: geminiError.message 
+      });
+    }
 
     let botResponse = geminiResponseText;
     let action = 'none';
@@ -176,10 +203,19 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ response: botResponse, action, bookingData });
   } catch (error) {
-    console.error('Erro na Vercel Function:', error);
+    console.error('❌ Erro na Vercel Function:', error);
+    console.error('❌ Stack trace:', error.stack);
+    console.error('❌ Request body:', JSON.stringify(req.body, null, 2));
+    
+    // Retornar erro mais detalhado em desenvolvimento
+    const errorMessage = process.env.NODE_ENV === 'development' 
+      ? error.message 
+      : 'Erro interno do servidor';
+    
     return res.status(500).json({ 
       message: 'Erro interno do servidor', 
-      error: error.message 
+      error: errorMessage,
+      ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
     });
   }
 }
