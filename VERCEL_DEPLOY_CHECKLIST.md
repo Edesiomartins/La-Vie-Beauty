@@ -23,7 +23,7 @@ O arquivo `.env.local` é **apenas para desenvolvimento local**. Para produção
    - Formato: `"-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"`
 
 4. **GEMINI_API_KEY**
-   - Valor: `AIzaSyAmr2VJpnzX67yW2w96POzFqu96UfsrBuo`
+   - Valor: `AIzaSyAd60HU42c3HKpdP02COhCC10ZtMDAgzP0` (atualizada)
 
 ## 🔍 Como Configurar no Vercel:
 
