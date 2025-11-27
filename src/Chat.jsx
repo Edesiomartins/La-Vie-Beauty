@@ -14,6 +14,8 @@ const FloatingChat = ({ clientId, salonId, setView }) => {
   // Debug: verificar se o componente está sendo renderizado
   useEffect(() => {
     console.log('💬 FloatingChat renderizado:', { clientId, salonId });
+    console.log('💬 clientId:', clientId);
+    console.log('💬 salonId:', salonId);
   }, [clientId, salonId]);
 
   // Scroll para o final das mensagens
