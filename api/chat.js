@@ -217,7 +217,7 @@ export default async function handler(req, res) {
 
     // Inicializa Modelo (Flash é rápido e bom para Tools)
     const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.5-flash', 
+      model: 'gemini-2.0-exp', 
       systemInstruction: systemPrompt,
       tools: tools
     });
