@@ -1046,7 +1046,7 @@ const ClientHomeScreen = ({
                 </div>
             ) : (
                 services
-                    .filter(s => (s.category || s.categoria) === activeCategory || activeCategory === 'Todos')
+                    .filter(s => !activeCategory || (s.category || s.categoria) === activeCategory)
                     .map(service => (
                         <div
                             key={service.id}
@@ -1453,17 +1453,30 @@ const CollaboratorFormScreen = ({
     editingCollaborator
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('Todos');
+    const uniqueCategories = [...new Set(services.map(s => (s?.category || s?.categoria)).filter(Boolean))].sort();
+    const [selectedCategory, setSelectedCategory] = useState(uniqueCategories[0] || '');
     
-    // Extrair categorias únicas dos serviços
-    const categories = ['Todos', ...new Set(services.map(s => (s?.category || s?.categoria)).filter(Boolean))].sort();
+    // Atualizar categoria selecionada quando as categorias mudarem
+    useEffect(() => {
+        if (uniqueCategories.length > 0) {
+            // Se a categoria atual não existe mais, seleciona a primeira disponível
+            if (!uniqueCategories.includes(selectedCategory)) {
+                setSelectedCategory(uniqueCategories[0]);
+            }
+        } else {
+            setSelectedCategory('');
+        }
+    }, [services]);
+    
+    // Extrair categorias únicas dos serviços (sem "Todos")
+    const categories = uniqueCategories;
     
     // Filtrar serviços por categoria e busca
     const filteredServices = services.filter(service => {
         const serviceName = (service.name || service.nome || '').toLowerCase();
         const serviceCategory = service.category || service.categoria || '';
         const matchSearch = !searchTerm || serviceName.includes(searchTerm.toLowerCase());
-        const matchCategory = selectedCategory === 'Todos' || serviceCategory === selectedCategory;
+        const matchCategory = !selectedCategory || serviceCategory === selectedCategory;
         return matchSearch && matchCategory;
     });
     
@@ -1484,7 +1497,7 @@ const CollaboratorFormScreen = ({
 
     const getSelectedCountInCategory = () => {
         const currentServices = collaboratorForm.services || [];
-        if (selectedCategory === 'Todos') return currentServices.length;
+        if (!selectedCategory) return currentServices.length;
         return services.filter(s => (s.category || s.categoria) === selectedCategory && currentServices.includes(s.id)).length;
     };
 
@@ -1514,7 +1527,7 @@ const CollaboratorFormScreen = ({
                 <button onClick={() => {
                     setShowCollaboratorForm(false);
                     setEditingCollaborator(null);
-                    setCollaboratorForm({ name: '', phone: '(   ) ', email: '', services: [], active: true });
+                    setCollaboratorForm({ name: '', phone: '(   ) ', email: '', googleCalendarId: '', services: [], active: true });
                 }} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                     <X size={22} className="text-gray-600" />
                 </button>
@@ -1556,6 +1569,25 @@ const CollaboratorFormScreen = ({
                         onChange={e => setCollaboratorForm({...collaboratorForm, email: e.target.value})}
                         placeholder="maria@email.com"
                     />
+
+                    {/* --- CAMPO NOVO: INTEGRAÇÃO GOOGLE AGENDA --- */}
+                    <div className="bg-blue-50 p-4 rounded-xl space-y-2 border border-blue-100 mt-4">
+                        <div className="flex items-center gap-2 text-blue-800 font-bold text-sm">
+                            <Calendar size={16} />
+                            Integração Google Agenda
+                        </div>
+                        <p className="text-[10px] text-blue-600 leading-tight">
+                            Cole o <strong>ID da Agenda</strong> (ex: <code>c_123...group.calendar.google.com</code>) criada para esta profissional.
+                        </p>
+                        <input
+                            type="text"
+                            value={collaboratorForm.googleCalendarId || ''}
+                            onChange={e => setCollaboratorForm({...collaboratorForm, googleCalendarId: e.target.value})}
+                            placeholder="Cole o ID da agenda aqui"
+                            className="w-full p-3 rounded-lg border border-blue-200 text-sm focus:ring-2 focus:ring-blue-300 outline-none text-gray-700"
+                        />
+                    </div>
+                    {/* ------------------------------------------- */}
 
                     {/* Status Ativo */}
                     <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
@@ -1604,36 +1636,38 @@ const CollaboratorFormScreen = ({
                                 />
                             </div>
                             {/* Select de Categoria Estilizado */}
-                            <div className="relative">
-                                <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
-                                    <List size={18} className="text-purple-400" />
+                            {categories.length > 0 && (
+                                <div className="relative">
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none">
+                                        <List size={18} className="text-purple-400" />
+                                    </div>
+                                    <select
+                                        value={selectedCategory}
+                                        onChange={(e) => setSelectedCategory(e.target.value)}
+                                        className="w-full pl-12 pr-10 py-4 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-200 text-purple-800 font-bold appearance-none cursor-pointer hover:border-purple-300 focus:border-purple-400 focus:ring-4 focus:ring-purple-100 outline-none transition-all shadow-sm"
+                                        style={{
+                                            backgroundImage: 'none',
+                                            WebkitAppearance: 'none',
+                                            MozAppearance: 'none'
+                                        }}
+                                    >
+                                        {categories.map(cat => (
+                                            <option 
+                                                key={cat} 
+                                                value={cat}
+                                                className="bg-white text-gray-800 py-3"
+                                            >
+                                                {cat} ({services.filter(s => (s.category || s.categoria) === cat).length})
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                                        <ChevronRight size={20} className="text-purple-400 rotate-90" />
+                                    </div>
                                 </div>
-                                <select
-                                    value={selectedCategory}
-                                    onChange={(e) => setSelectedCategory(e.target.value)}
-                                    className="w-full pl-12 pr-10 py-4 rounded-xl bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-200 text-purple-800 font-bold appearance-none cursor-pointer hover:border-purple-300 focus:border-purple-400 focus:ring-4 focus:ring-purple-100 outline-none transition-all shadow-sm"
-                                    style={{
-                                        backgroundImage: 'none',
-                                        WebkitAppearance: 'none',
-                                        MozAppearance: 'none'
-                                    }}
-                                >
-                                    {categories.map(cat => (
-                                        <option 
-                                            key={cat} 
-                                            value={cat}
-                                            className="bg-white text-gray-800 py-3"
-                                        >
-                                            {cat} {cat !== 'Todos' && `(${services.filter(s => (s.category || s.categoria) === cat).length})`}
-                                        </option>
-                                    ))}
-                                </select>
-                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                                    <ChevronRight size={20} className="text-purple-400 rotate-90" />
-                                </div>
-                            </div>
+                            )}
                             {/* Contador de Seleção na Categoria */}
-                            {selectedCategory !== 'Todos' && getSelectedCountInCategory() > 0 && (
+                            {selectedCategory && getSelectedCountInCategory() > 0 && (
                                 <div className="bg-purple-50 p-3 rounded-xl flex items-center justify-between">
                                     <span className="text-sm text-purple-700">
                                         {getSelectedCountInCategory()} de {filteredServices.length} selecionados em <strong>{selectedCategory}</strong>
@@ -2074,10 +2108,10 @@ export default function App() {
     const [loading, setLoading] = useState(false);
 
     const [services, setServices] = useState([]);
-    const [categories, setCategories] = useState(['Todos']);
+    const [categories, setCategories] = useState([]);
     const [appointments, setAppointments] = useState([]);
 
-    const [activeCategory, setActiveCategory] = useState('Todos');
+    const [activeCategory, setActiveCategory] = useState('');
     const [selectedService, setSelectedService] = useState(null);
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [selectedTime, setSelectedTime] = useState(null);
@@ -2109,6 +2143,7 @@ export default function App() {
         name: '',
         phone: '(   ) ',
         email: '',
+        googleCalendarId: '',
         services: [],
         active: true
     });
@@ -2479,13 +2514,21 @@ export default function App() {
                         ...globalServicesData.map(s => s.category || s.categoria)
                     ].filter(Boolean);
                     
-                    const uniqueCats = ['Todos', ...new Set(allCategories)];
-                    setCategories(uniqueCats.sort());
+                    const uniqueCats = [...new Set(allCategories)].sort();
+                    setCategories(uniqueCats);
+                    // Definir a primeira categoria como ativa se não houver categoria selecionada
+                    if (uniqueCats.length > 0 && !activeCategory) {
+                        setActiveCategory(uniqueCats[0]);
+                    }
                 } catch (error) {
                     // Se falhar ao buscar serviços globais, usar apenas os do salão
                     if (servicesData.length > 0) {
-                        const uniqueCats = ['Todos', ...new Set(servicesData.map(s => s.category || s.categoria).filter(Boolean))];
-                        setCategories(uniqueCats.sort());
+                        const uniqueCats = [...new Set(servicesData.map(s => s.category || s.categoria).filter(Boolean))].sort();
+                        setCategories(uniqueCats);
+                        // Definir a primeira categoria como ativa se não houver categoria selecionada
+                        if (uniqueCats.length > 0 && !activeCategory) {
+                            setActiveCategory(uniqueCats[0]);
+                        }
                     }
                 }
             } catch (error) {
@@ -2503,6 +2546,18 @@ export default function App() {
             return () => unsubscribe();
         }
     }, [currentSalonId, view]);
+
+    // Atualizar categoria ativa quando as categorias mudarem
+    useEffect(() => {
+        if (categories.length > 0) {
+            // Se a categoria atual não existe mais, seleciona a primeira disponível
+            if (!categories.includes(activeCategory)) {
+                setActiveCategory(categories[0]);
+            }
+        } else {
+            setActiveCategory('');
+        }
+    }, [categories]);
 
     // Buscar colaboradores disponíveis quando serviço for selecionado
     useEffect(() => {
@@ -2813,32 +2868,32 @@ export default function App() {
 
         setLoading(true);
         try {
+            const collaboratorData = {
+                name: collaboratorForm.name,
+                phone: collaboratorForm.phone,
+                email: collaboratorForm.email,
+                googleCalendarId: collaboratorForm.googleCalendarId?.trim() || '',
+                services: collaboratorForm.services,
+                active: collaboratorForm.active
+            };
+
             if (editingCollaborator) {
                 // Editar existente
                 const docRef = doc(db, "salons", currentSalonId, "collaborators", editingCollaborator.id);
-                await updateDoc(docRef, {
-                    name: collaboratorForm.name,
-                    phone: collaboratorForm.phone,
-                    email: collaboratorForm.email,
-                    services: collaboratorForm.services,
-                    active: collaboratorForm.active
-                });
+                await updateDoc(docRef, collaboratorData);
                 alert("✅ Colaborador atualizado!");
             } else {
                 // Criar novo
                 await addDoc(collection(db, "salons", currentSalonId, "collaborators"), {
-                    name: collaboratorForm.name,
-                    phone: collaboratorForm.phone,
-                    email: collaboratorForm.email,
-                    services: collaboratorForm.services,
-                    active: collaboratorForm.active,
+                    ...collaboratorData,
                     createdAt: new Date().toISOString()
                 });
                 alert("✅ Colaborador cadastrado!");
             }
             
             setShowCollaboratorForm(false);
-            setCollaboratorForm({ name: '', phone: '(   ) ', email: '', services: [], active: true });
+            // Resetar form incluindo o novo campo
+            setCollaboratorForm({ name: '', phone: '(   ) ', email: '', googleCalendarId: '', services: [], active: true });
             setEditingCollaborator(null);
             if (view !== 'collaborator-management') {
                 setView('collaborator-management');
@@ -2872,9 +2927,13 @@ export default function App() {
                 name: editingCollaborator.name || '',
                 phone: editingCollaborator.phone || '(   ) ',
                 email: editingCollaborator.email || '',
+                googleCalendarId: editingCollaborator.googleCalendarId || '',
                 services: editingCollaborator.services || [],
                 active: editingCollaborator.active !== false
             });
+        } else {
+            // Resetar form quando não está editando
+            setCollaboratorForm({ name: '', phone: '(   ) ', email: '', googleCalendarId: '', services: [], active: true });
         }
     }, [editingCollaborator]);
 

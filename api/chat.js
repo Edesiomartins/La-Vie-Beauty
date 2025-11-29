@@ -2,16 +2,8 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { google } from 'googleapis';
 
-// --- Configuração Firebase (Client SDK) ---
-// Certifique-se que estas variáveis de ambiente estão configuradas no Vercel
-// VITE_FIREBASE_API_KEY
-// VITE_FIREBASE_AUTH_DOMAIN
-// VITE_FIREBASE_PROJECT_ID
-// VITE_FIREBASE_STORAGE_BUCKET
-// VITE_FIREBASE_MESSAGING_SENDER_ID
-// VITE_FIREBASE_APP_ID
-// VITE_FIREBASE_MEASUREMENT_ID
 const firebaseConfig = {
   apiKey: process.env.VITE_FIREBASE_API_KEY,
   authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN || "la-vie---coiffeur.firebaseapp.com",
@@ -24,188 +16,213 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-
-// --- Configuração Gemini ---
-// Certifique-se que GEMINI_API_KEY está configurada no Vercel
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' }); // Usando gemini-2.5-pro
+
+// --- Config Google Calendar ---
+const privateKey = process.env.GOOGLE_PRIVATE_KEY 
+  ? process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n') 
+  : undefined;
+
+let calendar = null;
+if (process.env.GOOGLE_CLIENT_EMAIL && privateKey) {
+  const auth = new google.auth.JWT(
+    process.env.GOOGLE_CLIENT_EMAIL,
+    null,
+    privateKey,
+    ['https://www.googleapis.com/auth/calendar.readonly']
+  );
+  calendar = google.calendar({ version: 'v3', auth });
+}
+
+// --- Tools ---
+const tools = [
+  {
+    functionDeclarations: [
+      {
+        name: "check_availability",
+        description: "Verifica a disponibilidade na agenda do Google de uma profissional específica.",
+        parameters: {
+          type: "OBJECT",
+          properties: {
+            date: { type: "STRING", description: "Data formato YYYY-MM-DD" },
+            professionalName: { type: "STRING", description: "Nome da profissional (ex: Ana)" }
+          },
+          required: ["date", "professionalName"],
+        },
+      },
+    ],
+  },
+];
+
+// --- Busca ID da Agenda no Firebase ---
+async function getProfessionalCalendarId(salonId, professionalName) {
+  try {
+    const collabsRef = collection(db, "salons", salonId, "collaborators");
+    const snapshot = await getDocs(collabsRef);
+    
+    // Busca "fuzzy" pelo nome (ex: "Ana" acha "Ana Silva")
+    const search = professionalName.toLowerCase();
+    const found = snapshot.docs.find(doc => {
+        const data = doc.data();
+        return data.name && data.name.toLowerCase().includes(search);
+    });
+
+    if (found) {
+        // Retorna o ID específico daquela sub-agenda
+        return found.data().googleCalendarId || null;
+    }
+    return null;
+  } catch (error) {
+    console.error("Erro ao buscar colaborador:", error);
+    return null;
+  }
+}
+
+// --- Consulta Google ---
+async function checkGoogleCalendarAvailability(salonId, date, professionalName) {
+  if (!calendar) return { error: "Erro de configuração do servidor (Google Calendar)." };
+
+  const calendarId = await getProfessionalCalendarId(salonId, professionalName);
+  
+  if (!calendarId) {
+    return { error: `Não encontrei a agenda conectada para ${professionalName}. Verifique se o ID da agenda foi cadastrado no perfil dela.` };
+  }
+
+  const timeMin = new Date(`${date}T08:00:00-03:00`).toISOString();
+  const timeMax = new Date(`${date}T19:00:00-03:00`).toISOString();
+
+  try {
+    const res = await calendar.freebusy.query({
+      resource: {
+        timeMin: timeMin,
+        timeMax: timeMax,
+        timeZone: 'America/Sao_Paulo',
+        items: [{ id: calendarId }],
+      },
+    });
+
+    const busySlots = res.data.calendars[calendarId].busy;
+
+    if (!busySlots || busySlots.length === 0) {
+      return { status: "livre", message: `A agenda da ${professionalName} está totalmente livre neste dia!` };
+    }
+
+    const busyFormatted = busySlots.map(slot => {
+        const start = new Date(slot.start).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+        const end = new Date(slot.end).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+        return `${start}-${end}`;
+    });
+
+    return { 
+      status: "parcial", 
+      busy_times: busyFormatted, 
+      info: `Horários OCUPADOS da ${professionalName}. O resto está livre.` 
+    };
+
+  } catch (error) {
+    console.error("Erro Google:", error);
+    return { error: "Erro técnico ao ler a agenda (verifique se o email do robô tem permissão nessa agenda)." };
+  }
+}
 
 export default async function handler(req, res) {
-  // --- CORS Headers ---
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ message: 'Method Not Allowed' });
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method Not Allowed' });
-  }
-
-  const { message, clientId, salonId, conversationId, history } = req.body;
-
-  if (!message || !clientId || !salonId) {
-    return res.status(400).json({ message: 'Missing required fields (message, clientId, salonId)' });
-  }
-
-  let availableServices = [];
-  let salonInfo = null;
+  const { message, clientId, salonId, history } = req.body;
 
   try {
-    // --- Buscar dados do Salão ---
-    const salonDocRef = doc(db, 'salonIds', salonId); // Assumindo salonId é o ID do documento
-    const salonDocSnap = await getDoc(salonDocRef);
-    if (salonDocSnap.exists()) {
-      salonInfo = salonDocSnap.data();
-    } else {
-      console.warn(`⚠️ Aviso: Salão com ID ${salonId} não encontrado.`);
-    }
+    // Busca dados básicos para o prompt
+    const salonDoc = await getDoc(doc(db, 'salons', salonId));
+    const salonInfo = salonDoc.exists() ? salonDoc.data() : {};
+    
+    // Lista de serviços para a IA saber o que oferecer
+    const servicesSnap = await getDocs(collection(db, 'salons', salonId, 'services'));
+    const serviceNames = servicesSnap.docs.map(d => d.data().name).join(', ') || "vários serviços";
 
-    // --- Buscar Serviços do Firestore ---
-    const servicesSnapshot = await getDocs(collection(db, 'services'));
-    availableServices = servicesSnapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        name: data.nome || data.name || '',
-        description: data.descricao || data.description || '',
-        price: data.preco || data.price || 0,
-        duration: data.duracao || data.duration_minutes || 0,
-      };
-    });
-  } catch (firestoreError) {
-    console.error('❌ Erro ao buscar dados do Firestore:', firestoreError);
-    // Continuar mesmo se houver erro no Firestore, mas com dados vazios
-  }
+    // Lista de profissionais
+    const collabSnap = await getDocs(collection(db, 'salons', salonId, 'collaborators'));
+    const collabNames = collabSnap.docs.map(d => d.data().name).join(', ') || "nossa equipe";
 
-  const serviceNames = availableServices.map(s => s.name).join(', ') || 'diversos serviços de beleza';
-  const salonName = salonInfo?.name || 'nosso salão';
-  const salonPhone = salonInfo?.phone || 'nosso telefone';
-  const salonAddress = salonInfo?.address || 'nosso endereço';
-  const salonWhatsapp = salonInfo?.whatsapp || 'nosso WhatsApp';
+    const chatHistory = (history || []).map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.content }],
+    }));
 
-  // --- Construir histórico do chat para Gemini ---
-  const chatHistory = history.map(msg => ({
-    role: msg.role === 'user' ? 'user' : 'model',
-    parts: [{ text: msg.content }],
-  }));
-
-  // --- Lógica de Cumprimento Inicial ---
-  let initialGreeting = '';
-  if (chatHistory.length === 0) { // Primeira mensagem da conversa
-    const hour = new Date().getHours();
-    if (hour < 12) initialGreeting = 'Bom dia';
-    else if (hour < 18) initialGreeting = 'Boa tarde';
-    else initialGreeting = 'Boa noite';
-    initialGreeting += `! Seja bem-vinda(o) a ${salonName}.`;
-  }
-
-  // --- Prompt do Bot (Juliana) ---
-  const systemPrompt = `
-Você é Juliana, uma consultora de beleza do salão ${salonName}.
-Sua personalidade: acolhedora, profissional, delicada, humana e simpática.
-Seu objetivo: ajudar a cliente a encontrar o serviço perfeito e agendar.
-
-Serviços disponíveis no salão: ${serviceNames}.
-Informações do salão:
-- Nome: ${salonName}
-- Telefone: ${salonPhone}
-- Endereço: ${salonAddress}
-- WhatsApp para agendamento: ${salonWhatsapp}
-
-Regras de interação:
-1. Responda SEMPRE em português.
-2. Mantenha as respostas concisas (máximo 3 linhas).
-3. Se for a primeira mensagem da cliente, use o cumprimento inicial: "${initialGreeting}". Após isso, interaja naturalmente sem repetir cumprimentos.
-4. Mantenha o contexto da conversa.
-5. Se a cliente perguntar sobre serviços, use a lista de serviços disponíveis para recomendar.
-6. Se a cliente perguntar sobre o salão (endereço, telefone, contato), forneça as informações.
-7. Se a cliente expressar interesse em agendar, colete as seguintes informações:
-   - Qual serviço deseja?
-   - Qual a data preferida?
-   - Qual o horário preferido?
-   Após coletar essas informações, você DEVE retornar uma mensagem amigável e incluir um bloco JSON no final da sua resposta para que o sistema possa processar o agendamento.
-
-Formato do bloco JSON para ações (booking ou info):
-- Para agendamento: [ACTION_DATA]{"action": "booking", "service": "nome do serviço", "date": "AAAA-MM-DD", "time": "HH:MM", "client_name": "Nome da Cliente"}[/ACTION_DATA]
-- Para informações do salão: [ACTION_DATA]{"action": "info", "type": "contact"}[/ACTION_DATA]
-- Se não houver ação específica, não inclua o bloco JSON.
-
-Exemplo de resposta para agendamento:
-"Que ótimo! Para confirmar seu agendamento de [serviço] para [data] às [hora], por favor, clique no link do WhatsApp ou ligue para nós. Estamos ansiosas para te receber! [ACTION_DATA]{"action": "booking", "service": "Corte", "date": "2025-12-25", "time": "10:00", "client_name": "Maria"}[/ACTION_DATA]"
-
-Exemplo de resposta para informações:
-"Claro! Nosso endereço é ${salonAddress} e o telefone é ${salonPhone}. Se preferir, pode nos chamar no WhatsApp ${salonWhatsapp}. [ACTION_DATA]{"action": "info", "type": "contact"}[/ACTION_DATA]"
+    const systemPrompt = `
+      Você é Juliana, assistente do salão ${salonInfo.name || "La Vie"}.
+      
+      DADOS:
+      - Serviços: ${serviceNames}
+      - Profissionais: ${collabNames}
+      - Endereço: ${salonInfo.address}
+      
+      REGRAS:
+      1. Pergunte: Serviço, Profissional, Data e Hora.
+      2. Se a cliente escolher data e profissional, USE A FERRAMENTA 'check_availability'.
+      3. Importante: Se a cliente não disser o nome da profissional, PERGUNTE: "Com quem você gostaria de agendar? Temos: ${collabNames}".
+      4. A ferramenta retorna horários OCUPADOS. Ofereça os LIVRES.
+      
+      JSON FINAL:
+      [ACTION_DATA]{"action": "booking", "service": "...", "date": "...", "time": "...", "professional": "...", "client_name": "${clientId}"}[/ACTION_DATA]
     `;
 
-  try {
+    const model = genAI.getGenerativeModel({ 
+      model: 'gemini-1.5-flash', 
+      systemInstruction: systemPrompt,
+      tools: tools
+    });
+
     const chat = model.startChat({ history: chatHistory });
-    const result = await chat.sendMessage(systemPrompt + "\n" + message); // Adiciona o prompt do sistema à mensagem
-    const botResponseRaw = result.response.text();
+    let result = await chat.sendMessage(message);
+    let response = await result.response;
+    let text = response.text();
 
-    let finalResponse = botResponseRaw;
-    let action = 'none';
-    let bookingData = null;
-
-    // --- Extrair bloco JSON da resposta do bot ---
-    const actionDataRegex = /\[ACTION_DATA\](.*?)\[\/ACTION_DATA\]/s;
-    const match = botResponseRaw.match(actionDataRegex);
-
-    if (match && match[1]) {
-      try {
-        const parsedActionData = JSON.parse(match[1]);
-        action = parsedActionData.action || 'none';
-
-        if (action === 'booking') {
-          bookingData = {
-            client_name: parsedActionData.client_name || clientId, // Usar clientId como fallback
-            service: parsedActionData.service || '',
-            date: parsedActionData.date || '',
-            time: parsedActionData.time || '',
-            salon_name: salonName,
-            salon_phone: salonPhone,
-            salon_address: salonAddress,
-            whatsapp_link: `https://wa.me/${salonWhatsapp}?text=Olá! Gostaria de agendar um ${parsedActionData.service || ''} para o dia ${parsedActionData.date || ''} às ${parsedActionData.time || ''}. Meu nome é ${parsedActionData.client_name || clientId}.`
-          };
-        } else if (action === 'info' && parsedActionData.type === 'contact') {
-          bookingData = { // Reutilizando bookingData para info de contato
-            salon_name: salonName,
-            salon_phone: salonPhone,
-            salon_address: salonAddress,
-            whatsapp_link: `https://wa.me/${salonWhatsapp}?text=Olá! Gostaria de mais informações sobre o salão.`
-          };
-        }
-        // Remover o bloco JSON da resposta final para a cliente
-        finalResponse = botResponseRaw.replace(actionDataRegex, '').trim();
-
-      } catch (jsonParseError) {
-        console.error('❌ Erro ao parsear JSON do bot:', jsonParseError);
-        // Se o JSON estiver malformado, apenas use a resposta crua
+    const functionCalls = response.functionCalls();
+    if (functionCalls && functionCalls.length > 0) {
+      const call = functionCalls[0];
+      if (call.name === "check_availability") {
+        const { date, professionalName } = call.args;
+        const apiResponse = await checkGoogleCalendarAvailability(salonId, date, professionalName);
+        
+        const functionResponse = [{
+            functionResponse: { name: "check_availability", response: apiResponse }
+        }];
+        
+        result = await chat.sendMessage(functionResponse);
+        response = await result.response;
+        text = response.text();
       }
     }
 
-    // Se for a primeira mensagem e não houver ação, adicione o cumprimento inicial
-    if (chatHistory.length === 0 && !action) {
-        finalResponse = initialGreeting + " " + finalResponse;
+    // Extração JSON (igual ao anterior)
+    let action = 'none';
+    let bookingData = null;
+    const actionDataRegex = /\[ACTION_DATA\](.*?)\[\/ACTION_DATA\]/s;
+    const match = text.match(actionDataRegex);
+
+    if (match && match[1]) {
+        try {
+            const parsed = JSON.parse(match[1]);
+            action = parsed.action;
+            text = text.replace(actionDataRegex, '').trim();
+            if (action === 'booking') {
+                bookingData = {
+                    ...parsed,
+                    whatsapp_link: `https://wa.me/${salonInfo.phone?.replace(/\D/g,'')}?text=Confirmo: ${parsed.service} com ${parsed.professional} dia ${parsed.date} às ${parsed.time}`
+                };
+            }
+        } catch (e) {}
     }
 
-
-    return res.status(200).json({
-      response: finalResponse,
-      action: action,
-      bookingData: bookingData
-    });
+    return res.status(200).json({ response: text, action, bookingData });
 
   } catch (error) {
-    console.error('❌ Erro na API do Gemini:', error);
-    return res.status(500).json({
-      response: 'Desculpe, Juliana está um pouco ocupada agora. Por favor, tente novamente mais tarde.',
-      action: 'none',
-      bookingData: null,
-      error: error.message,
-      details: error.toString()
-    });
+    console.error(error);
+    return res.status(500).json({ error: error.message });
   }
 }
