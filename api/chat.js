@@ -215,9 +215,9 @@ export default async function handler(req, res) {
       [ACTION_DATA]{"action": "booking", "service": "...", "date": "YYYY-MM-DD", "time": "HH:MM", "professional": "...", "client_name": "${clientId}"}[/ACTION_DATA]
     `;
 
-    // Inicializa Modelo (Flash é rápido e bom para Tools)
+    // Inicializa Modelo (gemini-1.5-pro é estável e suporta tools)
     const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.0-exp', 
+      model: 'gemini-1.5-pro', 
       systemInstruction: systemPrompt,
       tools: tools
     });
