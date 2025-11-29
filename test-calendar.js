@@ -1,42 +1,61 @@
-// test-calendar.js
+// test-calendar.js (Versão Final - Lê .env.local)
 import { google } from 'googleapis';
 import dotenv from 'dotenv';
+import fs from 'fs';
 
-// Carrega as chaves do .env
-dotenv.config({ path: '.env.local' });
+// 1. FORÇA A LEITURA DO .ENV.LOCAL
+// Verifica se o arquivo existe antes de tentar ler
+if (fs.existsSync('.env.local')) {
+    console.log("📂 Arquivo .env.local encontrado. Carregando variáveis...");
+    dotenv.config({ path: '.env.local' });
+} else {
+    console.log("⚠️ Arquivo .env.local não encontrado, tentando .env padrão...");
+    dotenv.config();
+}
 
-// CONFIGURAÇÃO MANUAL PARA TESTE
-const CALENDAR_ID = "c1aecb3e7e90ea4a37a6cc8929bae6158f4d7e0b3a6564bbf423eda10e803baf@group.calendar.google.com"; // <--- SUBSTITUA ISSO!
-const DATE_TO_TEST = "2025-11-29"; // Coloque a data de HOJE (AAAA-MM-DD)
+// SEU ID DA AGENDA (O que você mandou)
+const CALENDAR_ID = "c1aecb3e7e90ea4a37a6cc8929bae6158f4d7e0b3a6564bbf423eda10e803baf@group.calendar.google.com";
+const DATE_TO_TEST = "2025-11-29"; // Hoje
 
 async function testConnection() {
-  console.log("🤖 Iniciando teste de conexão com Google Agenda...");
+  console.log("🤖 Iniciando teste de conexão...");
 
-  // 1. Verifica Chaves
-  if (!process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
-    console.error("❌ ERRO: Chaves não encontradas no arquivo .env");
+  // Debug: Mostra se carregou (escondendo parte da chave por segurança)
+  const hasEmail = !!process.env.GOOGLE_CLIENT_EMAIL;
+  const hasKey = !!process.env.GOOGLE_PRIVATE_KEY;
+  console.log(`- Email carregado? ${hasEmail ? "✅ Sim" : "❌ Não"}`);
+  console.log(`- Chave carregada? ${hasKey ? "✅ Sim" : "❌ Não"}`);
+
+  if (!hasEmail || !hasKey) {
+    console.error("❌ PARANDO: As chaves não foram lidas do .env.local");
     return;
   }
-  console.log("✅ Chaves encontradas no .env");
 
-  // 2. Autenticação
   try {
-    const privateKey = process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n');
-    const auth = new google.auth.JWT(
-      process.env.GOOGLE_CLIENT_EMAIL,
-      null,
-      privateKey,
-      ['https://www.googleapis.com/auth/calendar.readonly']
-    );
-    
-    const calendar = google.calendar({ version: 'v3', auth });
-    console.log("✅ Autenticação criada com sucesso");
+    // --- TRATAMENTO ROBUSTO DA CHAVE ---
+    let privateKey = process.env.GOOGLE_PRIVATE_KEY;
+    // Remove aspas extras se houver (comum ao copiar do .env)
+    if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
+        privateKey = privateKey.slice(1, -1);
+    }
+    // Converte os \n literais em quebras de linha reais
+    privateKey = privateKey.replace(/\\n/g, '\n');
 
-    // 3. Teste de Leitura (FreeBusy)
-    console.log(`🔎 Verificando agenda ${CALENDAR_ID} para o dia ${DATE_TO_TEST}...`);
-    
-    const timeMin = new Date(`${DATE_TO_TEST}T08:00:00-03:00`).toISOString();
-    const timeMax = new Date(`${DATE_TO_TEST}T19:00:00-03:00`).toISOString();
+    // --- AUTENTICAÇÃO ---
+    const auth = new google.auth.GoogleAuth({
+      credentials: {
+        client_email: process.env.GOOGLE_CLIENT_EMAIL,
+        private_key: privateKey,
+      },
+      scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
+    });
+
+    const calendar = google.calendar({ version: 'v3', auth });
+    console.log("✅ Autenticação configurada. Consultando Google...");
+
+    // Consulta horário
+    const timeMin = new Date(`${DATE_TO_TEST}T11:00:00-03:00`).toISOString();
+    const timeMax = new Date(`${DATE_TO_TEST}T22:00:00-03:00`).toISOString();
 
     const res = await calendar.freebusy.query({
       resource: {
@@ -48,37 +67,26 @@ async function testConnection() {
     });
 
     const calendarData = res.data.calendars[CALENDAR_ID];
-
-    if (!calendarData) {
-      console.error("❌ ERRO: Calendário não encontrado na resposta! Verifique se o ID está correto.");
-      console.log("Resposta bruta:", JSON.stringify(res.data, null, 2));
-      return;
-    }
-
+    
     if (calendarData.errors) {
-      console.error("❌ ERRO DE PERMISSÃO:");
+      console.error("❌ ERRO DE PERMISSÃO NA AGENDA:");
       console.error(calendarData.errors);
-      console.log("\nDICA: Verifique se você compartilhou a agenda com:", process.env.GOOGLE_CLIENT_EMAIL);
-      return;
-    }
-
-    const busySlots = calendarData.busy;
-    console.log("\n📅 RESULTADO:");
-    if (busySlots.length === 0) {
-      console.log("⚪ Nenhum evento encontrado (Agenda Livre). Se você criou um evento de teste, o robô não está vendo.");
     } else {
-      console.log("🔴 Eventos encontrados (Agenda Ocupada):");
-      busySlots.forEach(slot => {
-        const start = new Date(slot.start).toLocaleTimeString('pt-BR');
-        const end = new Date(slot.end).toLocaleTimeString('pt-BR');
-        console.log(`   - Ocupado das ${start} às ${end}`);
-      });
-      console.log("\n✅ SUCESSO! O robô está lendo a agenda corretamente.");
+      const busySlots = calendarData.busy;
+      console.log("\n🎉 SUCESSO TOTAL! Conexão estabelecida.");
+      if (busySlots.length === 0) {
+        console.log("⚪ Status: Agenda LIVRE neste período.");
+      } else {
+        console.log("🔴 Status: Agenda OCUPADA nos horários:");
+        busySlots.forEach(slot => {
+            console.log(`   ⛔ ${new Date(slot.start).toLocaleTimeString()} até ${new Date(slot.end).toLocaleTimeString()}`);
+        });
+      }
     }
 
   } catch (error) {
-    console.error("❌ ERRO FATAL:");
-    console.error(error);
+    console.error("❌ ERRO TÉCNICO:");
+    console.error(error.message);
   }
 }
 
