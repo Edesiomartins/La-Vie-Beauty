@@ -45,7 +45,7 @@ const tools = [
           type: "OBJECT",
           properties: {
             date: { type: "STRING", description: "Data formato YYYY-MM-DD" },
-            professionalName: { type: "STRING", description: "Nome da profissional (ex: Ana)" }
+            professionalName: { type: "STRING", description: "Nome da profissional" }
           },
           required: ["date", "professionalName"],
         },
@@ -54,13 +54,12 @@ const tools = [
   },
 ];
 
-// --- Busca ID da Agenda no Firebase ---
+// --- Busca ID da Agenda ---
 async function getProfessionalCalendarId(salonId, professionalName) {
   try {
     const collabsRef = collection(db, "salons", salonId, "collaborators");
     const snapshot = await getDocs(collabsRef);
     
-    // Busca "fuzzy" pelo nome (ex: "Ana" acha "Ana Silva")
     const search = professionalName.toLowerCase();
     const found = snapshot.docs.find(doc => {
         const data = doc.data();
@@ -68,7 +67,6 @@ async function getProfessionalCalendarId(salonId, professionalName) {
     });
 
     if (found) {
-        // Retorna o ID específico daquela sub-agenda
         return found.data().googleCalendarId || null;
     }
     return null;
@@ -80,12 +78,12 @@ async function getProfessionalCalendarId(salonId, professionalName) {
 
 // --- Consulta Google ---
 async function checkGoogleCalendarAvailability(salonId, date, professionalName) {
-  if (!calendar) return { error: "Erro de configuração do servidor (Google Calendar)." };
+  if (!calendar) return { error: "Erro: Chaves do Google Calendar não configuradas no .env." };
 
   const calendarId = await getProfessionalCalendarId(salonId, professionalName);
   
   if (!calendarId) {
-    return { error: `Não encontrei a agenda conectada para ${professionalName}. Verifique se o ID da agenda foi cadastrado no perfil dela.` };
+    return { error: `Não encontrei a agenda conectada para ${professionalName}.` };
   }
 
   const timeMin = new Date(`${date}T08:00:00-03:00`).toISOString();
@@ -104,7 +102,7 @@ async function checkGoogleCalendarAvailability(salonId, date, professionalName) 
     const busySlots = res.data.calendars[calendarId].busy;
 
     if (!busySlots || busySlots.length === 0) {
-      return { status: "livre", message: `A agenda da ${professionalName} está totalmente livre neste dia!` };
+      return { status: "livre", message: `A agenda da ${professionalName} está totalmente livre!` };
     }
 
     const busyFormatted = busySlots.map(slot => {
@@ -121,7 +119,7 @@ async function checkGoogleCalendarAvailability(salonId, date, professionalName) 
 
   } catch (error) {
     console.error("Erro Google:", error);
-    return { error: "Erro técnico ao ler a agenda (verifique se o email do robô tem permissão nessa agenda)." };
+    return { error: "Erro técnico ao ler a agenda." };
   }
 }
 
@@ -136,15 +134,12 @@ export default async function handler(req, res) {
   const { message, clientId, salonId, history } = req.body;
 
   try {
-    // Busca dados básicos para o prompt
     const salonDoc = await getDoc(doc(db, 'salons', salonId));
     const salonInfo = salonDoc.exists() ? salonDoc.data() : {};
     
-    // Lista de serviços para a IA saber o que oferecer
     const servicesSnap = await getDocs(collection(db, 'salons', salonId, 'services'));
     const serviceNames = servicesSnap.docs.map(d => d.data().name).join(', ') || "vários serviços";
 
-    // Lista de profissionais
     const collabSnap = await getDocs(collection(db, 'salons', salonId, 'collaborators'));
     const collabNames = collabSnap.docs.map(d => d.data().name).join(', ') || "nossa equipe";
 
@@ -153,26 +148,39 @@ export default async function handler(req, res) {
       parts: [{ text: msg.content }],
     }));
 
+    // --- CORREÇÃO AQUI: Pegar a data e hora atual do servidor ---
+    const now = new Date();
+    const currentDateTime = now.toLocaleString('pt-BR', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit' 
+    });
+
     const systemPrompt = `
       Você é Juliana, assistente do salão ${salonInfo.name || "La Vie"}.
       
+      CONTEXTO DE TEMPO (MUITO IMPORTANTE):
+      Hoje é: ${currentDateTime}
+      
       DADOS:
       - Serviços: ${serviceNames}
-      - Profissionais: ${collabNames}
+      - Equipe: ${collabNames}
       - Endereço: ${salonInfo.address}
       
       REGRAS:
       1. Pergunte: Serviço, Profissional, Data e Hora.
-      2. Se a cliente escolher data e profissional, USE A FERRAMENTA 'check_availability'.
-      3. Importante: Se a cliente não disser o nome da profissional, PERGUNTE: "Com quem você gostaria de agendar? Temos: ${collabNames}".
-      4. A ferramenta retorna horários OCUPADOS. Ofereça os LIVRES.
-      
-      JSON FINAL:
-      [ACTION_DATA]{"action": "booking", "service": "...", "date": "...", "time": "...", "professional": "...", "client_name": "${clientId}"}[/ACTION_DATA]
+      2. Se a cliente disser "amanhã" ou "sexta", calcule a data baseada em "Hoje é ${currentDateTime}".
+      3. Use a ferramenta 'check_availability' com a data no formato YYYY-MM-DD.
+      4. Se não disser o profissional, liste: ${collabNames}.
+      5. JSON FINAL: [ACTION_DATA]{"action": "booking", ...}[/ACTION_DATA]
     `;
 
+    // Pode usar 'gemini-1.5-flash' (estável) ou o seu 'gemini-2.0-flash-exp' se estiver funcionando
     const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.0-flash-exp', 
+      model: 'gemini-1.5-flash', 
       systemInstruction: systemPrompt,
       tools: tools
     });
@@ -199,7 +207,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // Extração JSON (igual ao anterior)
     let action = 'none';
     let bookingData = null;
     const actionDataRegex = /\[ACTION_DATA\](.*?)\[\/ACTION_DATA\]/s;
@@ -222,7 +229,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ response: text, action, bookingData });
 
   } catch (error) {
-    console.error(error);
+    console.error('❌ Erro API:', error);
     return res.status(500).json({ error: error.message });
   }
 }

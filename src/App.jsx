@@ -31,7 +31,8 @@ import {
     Trash2,
     Mail,
     LogIn,
-    Lock
+    Lock,
+    DollarSign
 } from 'lucide-react';
 
 // Importações do Firebase
@@ -651,11 +652,14 @@ const ServiceManagementScreen = ({
     globalServices, 
     salonServices, 
     loading,
-    handleToggleService 
+    handleToggleService,
+    currentSalonId,
+    handleUpdateServicePrice
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('Todos');
     const [selecting, setSelecting] = useState(false);
+    const [editingPrice, setEditingPrice] = useState({});
     
     const categories = ['Todos', ...new Set(globalServices.map(s => s?.category || s?.categoria).filter(Boolean))];
     
@@ -844,11 +848,41 @@ const ServiceManagementScreen = ({
                                                 <span className="text-purple-600 font-semibold">{service.category || service.categoria}</span>
                                             )}
                                         </div>
-                                    </div>
-
-                                    {/* Preço */}
-                                    <div className="text-right">
-                                        <span className="font-black text-pink-600 text-base">R$ {service.price || service.preco || '0'}</span>
+                                        
+                                        {/* Campo de Preço Personalizado - só aparece quando ativo */}
+                                        {isActive && (
+                                            <div className="mt-3 pt-3 border-t border-green-200" onClick={(e) => e.stopPropagation()}>
+                                                <label className="text-xs font-semibold text-gray-600 mb-1 block flex items-center gap-1">
+                                                    <DollarSign size={12} className="text-green-600" />
+                                                    Valor Personalizado
+                                                </label>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-gray-500 text-sm">R$</span>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.01"
+                                                        value={editingPrice[service.id] !== undefined ? editingPrice[service.id] : (salonServices.find(s => s.id === service.id)?.price || '')}
+                                                        onChange={(e) => {
+                                                            const value = e.target.value;
+                                                            setEditingPrice({...editingPrice, [service.id]: value});
+                                                        }}
+                                                        onBlur={async () => {
+                                                            const currentValue = editingPrice[service.id] !== undefined 
+                                                                ? editingPrice[service.id] 
+                                                                : (salonServices.find(s => s.id === service.id)?.price || '');
+                                                            if (handleUpdateServicePrice && currentValue !== '') {
+                                                                await handleUpdateServicePrice(service.id, parseFloat(currentValue) || 0);
+                                                                setEditingPrice({...editingPrice, [service.id]: undefined});
+                                                            }
+                                                        }}
+                                                        placeholder="0,00"
+                                                        className="flex-1 px-3 py-2 rounded-lg border border-green-300 text-sm focus:ring-2 focus:ring-green-400 focus:border-green-400 outline-none"
+                                                    />
+                                                </div>
+                                                <p className="text-[10px] text-gray-400 mt-1">Digite o valor que deseja cobrar por este serviço</p>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -1075,7 +1109,11 @@ const ClientHomeScreen = ({
                                     </div>
                                 </div>
                                 <div className="text-right flex flex-col items-end gap-1">
-                                    <span className="font-black text-pink-600 text-lg">R$ {service.price || service.preco}</span>
+                                    {(service.price && service.price > 0) ? (
+                                        <span className="font-black text-pink-600 text-lg">R$ {service.price}</span>
+                                    ) : (
+                                        <span className="text-xs text-gray-400 italic">Consulte valores</span>
+                                    )}
                                     <ChevronRight size={18} className="text-gray-300 group-hover:text-pink-500 transition-colors" />
                                 </div>
                             </div>
@@ -1145,9 +1183,15 @@ const BookingScreen = ({
                         <div className="flex-1">
                             <h3 className="font-bold text-xl mb-1">{selectedService.name || selectedService.nome}</h3>
                             <p className="text-pink-100 text-sm mb-3">{selectedService.duration_minutes || selectedService.duracao} minutos</p>
-                            <div className="bg-white/20 backdrop-blur-sm inline-block px-4 py-2 rounded-xl">
-                                <p className="font-black text-2xl">R$ {selectedService.price || selectedService.preco}</p>
-                            </div>
+                            {(selectedService.price && selectedService.price > 0) ? (
+                                <div className="bg-white/20 backdrop-blur-sm inline-block px-4 py-2 rounded-xl">
+                                    <p className="font-black text-2xl">R$ {selectedService.price}</p>
+                                </div>
+                            ) : (
+                                <div className="bg-white/20 backdrop-blur-sm inline-block px-4 py-2 rounded-xl">
+                                    <p className="text-sm text-pink-100 italic">Consulte valores</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -1733,7 +1777,11 @@ const CollaboratorFormScreen = ({
                                                             </span>
                                                         </div>
                                                     </div>
-                                                    <span className="text-xs font-bold text-purple-600 whitespace-nowrap">R$ {service.price || service.preco}</span>
+                                                    {(service.price && service.price > 0) ? (
+                                                        <span className="text-xs font-bold text-purple-600 whitespace-nowrap">R$ {service.price}</span>
+                                                    ) : (
+                                                        <span className="text-xs text-gray-400 italic whitespace-nowrap">Consulte valores</span>
+                                                    )}
                                                 </div>
                                             </div>
                                         );
@@ -2060,9 +2108,15 @@ const AdminScreen = ({
                                             <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-[10px] font-bold">
                                                 ✓ Confirmado
                                             </span>
-                                            <span className="text-pink-600 font-bold text-sm">
-                                                R$ {app.servicePrice}
-                                            </span>
+                                            {app.servicePrice && app.servicePrice > 0 ? (
+                                                <span className="text-pink-600 font-bold text-sm">
+                                                    R$ {app.servicePrice}
+                                                </span>
+                                            ) : (
+                                                <span className="text-gray-400 text-xs italic">
+                                                    Consulte valores
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -2367,6 +2421,23 @@ export default function App() {
         }
     };
 
+    const handleUpdateServicePrice = async (serviceId, price) => {
+        if (!currentSalonId) return;
+        
+        try {
+            const serviceRef = doc(db, "salons", currentSalonId, "services", serviceId);
+            await updateDoc(serviceRef, { price: price });
+            
+            // Atualizar estado local
+            setSalonServices(prev => prev.map(s => 
+                s.id === serviceId ? { ...s, price: price } : s
+            ));
+        } catch (error) {
+            console.error("Erro ao atualizar preço:", error);
+            alert("❌ Erro ao atualizar preço. Tente novamente.");
+        }
+    };
+
     const handleToggleService = async (service) => {
         if (!currentSalonId) return;
         
@@ -2391,14 +2462,8 @@ export default function App() {
                     serviceData.name = '';
                 }
                 
-                // Normalizar price (português: preco, inglês: price)
-                if (service.price !== undefined && service.price !== null) {
-                    serviceData.price = service.price;
-                } else if (service.preco !== undefined && service.preco !== null) {
-                    serviceData.price = service.preco;
-                } else {
-                    serviceData.price = 0;
-                }
+                // Preço personalizado - sempre começa como 0 (será definido pelo proprietário)
+                serviceData.price = 0;
                 
                 // Normalizar category (português: categoria, inglês: category)
                 if (service.category !== undefined && service.category !== null) {
@@ -2451,7 +2516,7 @@ export default function App() {
                 const normalizedService = {
                     id: service.id,
                     name: serviceData.name,
-                    price: serviceData.price,
+                    price: 0, // Preço personalizado será definido depois
                     category: serviceData.category || '',
                     duration_minutes: serviceData.duration_minutes || 0,
                     description: serviceData.description || ''
@@ -3079,6 +3144,8 @@ export default function App() {
                             salonServices={salonServices}
                             loading={loading}
                             handleToggleService={handleToggleService}
+                            currentSalonId={currentSalonId}
+                            handleUpdateServicePrice={handleUpdateServicePrice}
                         />
                     )}
 
