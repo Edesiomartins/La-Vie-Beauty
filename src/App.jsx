@@ -3260,6 +3260,7 @@ export default function App() {
             {/* FloatingChat - sempre no final, fora do container com overflow-hidden */}
             {view === 'client-home' && currentSalonId && (clientData || clientPhone) && (
                 <FloatingChat
+                    key={currentSalonId}
                     clientId={(clientData?.phone || clientPhone || '').replace(/\D/g, '')}
                     salonId={currentSalonId}
                     setView={setView}
