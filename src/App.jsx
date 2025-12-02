@@ -2872,27 +2872,33 @@ export default function App() {
                 createdAt: new Date().toISOString()
             };
             
+            // Salva no banco do App
             await addDoc(collection(db, "salons", currentSalonId, "appointments"), appointmentData);
             
-            // TODO: Integração com Google Calendar
-            // Para implementar:
-            // 1. Obter googleCalendarId do salão (salonData.googleCalendarId)
-            // 2. Obter googleCalendarId do colaborador (selectedCollaborator.googleCalendarId)
-            // 3. Criar evento no Google Calendar usando Google Calendar API
-            // 4. Salvar eventId no agendamento para sincronização futura
-            // Exemplo:
-            // if (salonData?.googleCalendarId) {
-            //     const eventId = await createGoogleCalendarEvent({
-            //         calendarId: salonData.googleCalendarId,
-            //         summary: `${selectedService.name} - ${clientData.name}`,
-            //         start: new Date(`${selectedDate}T${selectedTime}`),
-            //         end: new Date(`${selectedDate}T${addMinutes(selectedTime, selectedService.duration_minutes)}`),
-            //         description: `Cliente: ${clientData.name}\nTelefone: ${clientData.phone}\nProfissional: ${selectedCollaborator.name}`
-            //     });
-            //     await updateDoc(doc(db, "salons", currentSalonId, "appointments", appointmentRef.id), {
-            //         googleCalendarEventId: eventId
-            //     });
-            // }
+            // NOVO: Salvar no Google Agenda (Integração)
+            // Verifica se o colaborador tem um ID de agenda configurado
+            if (selectedCollaborator.googleCalendarId) {
+                try {
+                    // Chama nossa API de backend
+                    await fetch('/api/create-appointment', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            serviceName: appointmentData.serviceName,
+                            date: appointmentData.date,
+                            time: appointmentData.time,
+                            duration: selectedService.duration_minutes || selectedService.duracao || 60,
+                            clientName: appointmentData.clientName,
+                            clientPhone: appointmentData.clientPhone,
+                            googleCalendarId: selectedCollaborator.googleCalendarId // O ID que colamos no cadastro
+                        })
+                    });
+                    console.log("✅ Sincronizado com Google Agenda!");
+                } catch (googleError) {
+                    console.error("⚠️ Agendado no App, mas falhou no Google:", googleError);
+                    // Não damos alert de erro aqui para não assustar o cliente, pois no App já salvou.
+                }
+            }
             
             setLoading(false);
             setView('success');
