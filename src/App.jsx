@@ -2136,7 +2136,7 @@ const AdminScreen = ({
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="font-bold text-gray-800 text-lg flex items-center gap-2">
                         <Calendar size={20} className="text-pink-500" />
-                        Agenda Hoje
+                        Agenda do Dia
                     </h3>
                 </div>
                 {appointments.length === 0 ? (
