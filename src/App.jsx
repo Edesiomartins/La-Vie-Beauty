@@ -37,7 +37,7 @@ import {
 
 // Importações do Firebase
 import { db } from './firebaseConfig';
-import { collection, getDocs, addDoc, query, where, onSnapshot, doc, setDoc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, query, where, onSnapshot, doc, setDoc, getDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 
 // Importação do Chat
 import FloatingChat from './Chat';
@@ -2008,6 +2008,7 @@ const AdminScreen = ({
     selectedAppointments,
     setSelectedAppointments,
     handleDeleteSelectedAppointments,
+    handleSync,
     loading
 }) => {
     const handleToggleAppointment = (appointmentId) => {
@@ -2056,6 +2057,14 @@ const AdminScreen = ({
                     </button>
                     <button onClick={() => setView('settings')} className="bg-white/10 backdrop-blur-sm p-3 rounded-2xl hover:bg-white/20 transition-all" title="Configurações">
                         <Settings size={20} />
+                    </button>
+                    <button 
+                        onClick={handleSync}
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-lg ml-2"
+                        title="Sincronizar com Google Calendar"
+                    >
+                        <Zap size={18} />
+                        Sincronizar
                     </button>
                 </div>
                 <button 
@@ -2963,14 +2972,14 @@ export default function App() {
             };
             
             // Salva no banco do App
-            await addDoc(collection(db, "salons", currentSalonId, "appointments"), appointmentData);
+            const appointmentRef = await addDoc(collection(db, "salons", currentSalonId, "appointments"), appointmentData);
             
             // NOVO: Salvar no Google Agenda (Integração)
             // Verifica se o colaborador tem um ID de agenda configurado
             if (selectedCollaborator.googleCalendarId) {
                 try {
                     // Chama nossa API de backend
-                    await fetch('/api/create-appointment', {
+                    const googleResponse = await fetch('/api/create-appointment', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -2983,7 +2992,18 @@ export default function App() {
                             googleCalendarId: selectedCollaborator.googleCalendarId // O ID que colamos no cadastro
                         })
                     });
-                    console.log("✅ Sincronizado com Google Agenda!");
+                    
+                    if (googleResponse.ok) {
+                        const googleData = await googleResponse.json();
+                        // Atualiza o agendamento com o ID do evento do Google
+                        if (googleData.googleEventId) {
+                            await updateDoc(appointmentRef, {
+                                googleEventId: googleData.googleEventId,
+                                googleCalendarId: selectedCollaborator.googleCalendarId
+                            });
+                        }
+                        console.log("✅ Sincronizado com Google Agenda!");
+                    }
                 } catch (googleError) {
                     console.error("⚠️ Agendado no App, mas falhou no Google:", googleError);
                     // Não damos alert de erro aqui para não assustar o cliente, pois no App já salvou.
@@ -3027,6 +3047,46 @@ export default function App() {
         } catch (error) {
             console.error("Erro ao excluir agendamentos:", error);
             alert("❌ Erro ao excluir agendamentos. Tente novamente.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Função para limpar agendamentos fantasmas
+    const handleSync = async () => {
+        if (appointments.length === 0) return;
+        setLoading(true);
+        try {
+            // 1. Filtra apenas os que têm vínculo com Google
+            const linkedAppointments = appointments.filter(a => a.googleEventId && a.googleCalendarId);
+            
+            if (linkedAppointments.length === 0) {
+                alert("Nenhum agendamento vinculado ao Google para verificar.");
+                setLoading(false);
+                return;
+            }
+            // 2. Pergunta para a API: "Quais desses sumiram do Google?"
+            const response = await fetch('/api/sync-status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ appointments: linkedAppointments })
+            });
+            const data = await response.json();
+            // 3. Apaga do Firebase os que a API mandou
+            if (data.idsToDelete && data.idsToDelete.length > 0) {
+                const batch = writeBatch(db);
+                data.idsToDelete.forEach(id => {
+                    const docRef = doc(db, "salons", currentSalonId || salonData?.id, "appointments", id);
+                    batch.delete(docRef);
+                });
+                await batch.commit();
+                alert(`🧹 Limpeza completa! ${data.idsToDelete.length} agendamentos fantasmas removidos.`);
+            } else {
+                alert("✅ Tudo sincronizado! Nenhum agendamento fantasma.");
+            }
+        } catch (error) {
+            console.error("Erro ao sincronizar:", error);
+            alert("Erro na sincronização.");
         } finally {
             setLoading(false);
         }
@@ -3375,6 +3435,7 @@ export default function App() {
                             selectedAppointments={selectedAppointments}
                             setSelectedAppointments={setSelectedAppointments}
                             handleDeleteSelectedAppointments={handleDeleteSelectedAppointments}
+                            handleSync={handleSync}
                             loading={loading}
                         />
                     )}
