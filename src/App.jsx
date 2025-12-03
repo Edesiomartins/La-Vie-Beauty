@@ -2004,8 +2004,29 @@ const AdminScreen = ({
     appointments,
     services,
     setView,
-    setCurrentSalonId
-}) => (
+    setCurrentSalonId,
+    selectedAppointments,
+    setSelectedAppointments,
+    handleDeleteSelectedAppointments,
+    loading
+}) => {
+    const handleToggleAppointment = (appointmentId) => {
+        if (selectedAppointments.includes(appointmentId)) {
+            setSelectedAppointments(selectedAppointments.filter(id => id !== appointmentId));
+        } else {
+            setSelectedAppointments([...selectedAppointments, appointmentId]);
+        }
+    };
+
+    const handleSelectAll = () => {
+        if (selectedAppointments.length === appointments.length) {
+            setSelectedAppointments([]);
+        } else {
+            setSelectedAppointments(appointments.map(app => app.id));
+        }
+    };
+
+    return (
     <div className="flex flex-col h-full bg-gradient-to-b from-gray-50 to-white">
         <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6 pt-12 pb-8 rounded-b-[40px] shadow-2xl">
             {/* Título centralizado no topo */}
@@ -2058,9 +2079,29 @@ const AdminScreen = ({
                     <Calendar size={20} className="text-pink-500" />
                     Agenda do Dia
                 </h3>
-                <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-xs font-bold">
-                    {appointments.length} agendamentos
-                </span>
+                <div className="flex items-center gap-2">
+                    {selectedAppointments.length > 0 && (
+                        <button
+                            onClick={handleDeleteSelectedAppointments}
+                            disabled={loading}
+                            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-lg disabled:opacity-50"
+                        >
+                            <Trash2 size={14} />
+                            Excluir ({selectedAppointments.length})
+                        </button>
+                    )}
+                    {appointments.length > 0 && (
+                        <button
+                            onClick={handleSelectAll}
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-bold transition-all"
+                        >
+                            {selectedAppointments.length === appointments.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
+                        </button>
+                    )}
+                    <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-xs font-bold">
+                        {appointments.length} agendamentos
+                    </span>
+                </div>
             </div>
 
             {appointments.length === 0 ? (
@@ -2074,8 +2115,16 @@ const AdminScreen = ({
             ) : (
                 <div className="space-y-3">
                     {appointments.map(app => (
-                        <div key={app.id} className="bg-white p-5 rounded-3xl shadow-md border-l-4 border-green-500 hover:shadow-xl transition-all duration-200 group">
+                        <div key={app.id} className={`bg-white p-5 rounded-3xl shadow-md border-l-4 ${selectedAppointments.includes(app.id) ? 'border-blue-500 bg-blue-50' : 'border-green-500'} hover:shadow-xl transition-all duration-200 group`}>
                             <div className="flex justify-between items-start">
+                                <div className="flex gap-3 items-start">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedAppointments.includes(app.id)}
+                                        onChange={() => handleToggleAppointment(app.id)}
+                                        className="mt-1 w-5 h-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
+                                    />
+                                </div>
                                 <div className="flex gap-4 flex-1">
                                     <div className="text-center">
                                         <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 rounded-2xl flex items-center justify-center mb-2">
@@ -2127,7 +2176,8 @@ const AdminScreen = ({
             )}
         </div>
     </div>
-);
+    );
+};
 
 const SuccessScreen = ({ setView, setCurrentSalonId }) => (
     <div className="flex flex-col h-full bg-gradient-to-br from-green-50 to-emerald-50 items-center justify-center p-8 text-center">
@@ -2164,6 +2214,7 @@ export default function App() {
     const [services, setServices] = useState([]);
     const [categories, setCategories] = useState([]);
     const [appointments, setAppointments] = useState([]);
+    const [selectedAppointments, setSelectedAppointments] = useState([]);
 
     const [activeCategory, setActiveCategory] = useState('');
     const [selectedService, setSelectedService] = useState(null);
@@ -2913,6 +2964,77 @@ export default function App() {
         }
     };
 
+    // Função para deletar agendamentos selecionados
+    const handleDeleteSelectedAppointments = async () => {
+        if (selectedAppointments.length === 0) {
+            alert("⚠️ Selecione pelo menos um agendamento para excluir");
+            return;
+        }
+
+        if (!confirm(`⚠️ Tem certeza que deseja excluir ${selectedAppointments.length} agendamento(s)?`)) {
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const deletePromises = selectedAppointments.map(appointmentId => {
+                const appointmentRef = doc(db, "salons", currentSalonId, "appointments", appointmentId);
+                return deleteDoc(appointmentRef);
+            });
+
+            await Promise.all(deletePromises);
+            setSelectedAppointments([]);
+            alert(`✅ ${selectedAppointments.length} agendamento(s) excluído(s) com sucesso!`);
+        } catch (error) {
+            console.error("Erro ao excluir agendamentos:", error);
+            alert("❌ Erro ao excluir agendamentos. Tente novamente.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Executar exclusão automática quando carregar agendamentos (exclui agendamentos de 7 dias atrás)
+    useEffect(() => {
+        if (currentSalonId && (view === 'admin' || view === 'settings' || view === 'service-management')) {
+            const autoDelete = async () => {
+                try {
+                    const today = new Date();
+                    const sevenDaysAgo = new Date(today);
+                    sevenDaysAgo.setDate(today.getDate() - 7);
+                    const cutoffDate = sevenDaysAgo.toISOString().split('T')[0];
+
+                    const appointmentsRef = collection(db, "salons", currentSalonId, "appointments");
+                    const q = query(appointmentsRef);
+                    const querySnapshot = await getDocs(q);
+                    
+                    const appointmentsToDelete = [];
+                    querySnapshot.forEach((docSnapshot) => {
+                        const data = docSnapshot.data();
+                        const appointmentDate = data.date;
+                        
+                        // Compara apenas a data (sem hora)
+                        if (appointmentDate && appointmentDate < cutoffDate) {
+                            appointmentsToDelete.push(docSnapshot.id);
+                        }
+                    });
+
+                    if (appointmentsToDelete.length > 0) {
+                        const deletePromises = appointmentsToDelete.map(appointmentId => {
+                            const appointmentRef = doc(db, "salons", currentSalonId, "appointments", appointmentId);
+                            return deleteDoc(appointmentRef);
+                        });
+
+                        await Promise.all(deletePromises);
+                        console.log(`✅ ${appointmentsToDelete.length} agendamento(s) antigo(s) excluído(s) automaticamente`);
+                    }
+                } catch (error) {
+                    console.error("Erro ao excluir agendamentos antigos:", error);
+                }
+            };
+            autoDelete();
+        }
+    }, [currentSalonId, view]);
+
     // Funções de Colaboradores
     useEffect(() => {
         if (!currentSalonId) return;
@@ -3211,6 +3333,10 @@ export default function App() {
                             services={services}
                             setView={setView}
                             setCurrentSalonId={setCurrentSalonId}
+                            selectedAppointments={selectedAppointments}
+                            setSelectedAppointments={setSelectedAppointments}
+                            handleDeleteSelectedAppointments={handleDeleteSelectedAppointments}
+                            loading={loading}
                         />
                     )}
 
