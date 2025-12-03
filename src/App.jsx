@@ -853,71 +853,80 @@ const ServiceManagementScreen = ({
                                         
                                         {/* Campo de Preço Personalizado - só aparece quando ativo */}
                                         {isActive && (
-                                            <div className="mt-3 pt-3 border-t border-green-200" onClick={(e) => e.stopPropagation()}>
-                                                <label className="text-xs font-semibold text-gray-600 mb-1 block flex items-center gap-1">
-                                                    <DollarSign size={12} className="text-green-600" />
-                                                    Valor Personalizado
-                                                </label>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-gray-500 text-sm">R$</span>
-                                                    <input
-                                                        type="number"
-                                                        min="0"
-                                                        step="0.01"
-                                                        value={editingPrice[service.id] !== undefined ? editingPrice[service.id] : (salonServices.find(s => s.id === service.id)?.price || '')}
-                                                        onChange={(e) => {
-                                                            const value = e.target.value;
-                                                            setEditingPrice({...editingPrice, [service.id]: value});
-                                                        }}
-                                                        onBlur={async () => {
-                                                            const currentValue = editingPrice[service.id] !== undefined 
-                                                                ? editingPrice[service.id] 
-                                                                : (salonServices.find(s => s.id === service.id)?.price || '');
-                                                            if (handleUpdateServicePrice && currentValue !== '') {
-                                                                await handleUpdateServicePrice(service.id, parseFloat(currentValue) || 0);
-                                                                setEditingPrice({...editingPrice, [service.id]: undefined});
-                                                            }
-                                                        }}
-                                                        placeholder="0,00"
-                                                        className="flex-1 px-3 py-2 rounded-lg border border-green-300 text-sm focus:ring-2 focus:ring-green-400 focus:border-green-400 outline-none"
-                                                    />
+                                            <>
+                                                <div className="mt-3 pt-3 border-t border-green-200" onClick={(e) => e.stopPropagation()}>
+                                                    <label className="text-xs font-semibold text-gray-600 mb-1 block flex items-center gap-1">
+                                                        <DollarSign size={12} className="text-green-600" />
+                                                        Valor Personalizado
+                                                    </label>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-gray-500 text-sm">R$</span>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.01"
+                                                            value={editingPrice[service.id] !== undefined ? editingPrice[service.id] : (salonServices.find(s => s.id === service.id)?.price || '')}
+                                                            onChange={(e) => {
+                                                                const value = e.target.value;
+                                                                setEditingPrice({...editingPrice, [service.id]: value});
+                                                            }}
+                                                            onBlur={async () => {
+                                                                const currentValue = editingPrice[service.id] !== undefined 
+                                                                    ? editingPrice[service.id] 
+                                                                    : (salonServices.find(s => s.id === service.id)?.price || '');
+                                                                if (handleUpdateServicePrice && currentValue !== '') {
+                                                                    await handleUpdateServicePrice(service.id, parseFloat(currentValue) || 0);
+                                                                    setEditingPrice({...editingPrice, [service.id]: undefined});
+                                                                }
+                                                            }}
+                                                            placeholder="0,00"
+                                                            className="flex-1 px-3 py-2 rounded-lg border border-green-300 text-sm focus:ring-2 focus:ring-green-400 focus:border-green-400 outline-none"
+                                                        />
+                                                    </div>
+                                                    <p className="text-[10px] text-gray-400 mt-1">Digite o valor que deseja cobrar por este serviço</p>
                                                 </div>
-                                                <p className="text-[10px] text-gray-400 mt-1">Digite o valor que deseja cobrar por este serviço</p>
-                                            </div>
-                                            
-                                            {/* Campo de Duração Personalizada */}
-                                            <div className="mt-3 pt-3 border-t border-green-200" onClick={(e) => e.stopPropagation()}>
-                                                <label className="text-xs font-semibold text-gray-600 mb-1 block flex items-center gap-1">
-                                                    <Clock size={12} className="text-green-600" />
-                                                    Duração Personalizada
-                                                </label>
-                                                <div className="flex items-center gap-2">
-                                                    <input
-                                                        type="number"
-                                                        min="15"
-                                                        step="15"
-                                                        value={editingDuration[service.id] !== undefined ? editingDuration[service.id] : (salonServices.find(s => s.id === service.id)?.duration_minutes || service.duration_minutes || service.duracao || '')}
-                                                        onChange={(e) => {
-                                                            const value = e.target.value;
-                                                            setEditingDuration({...editingDuration, [service.id]: value});
-                                                        }}
-                                                        onBlur={async () => {
-                                                            const currentValue = editingDuration[service.id] !== undefined 
-                                                                ? editingDuration[service.id] 
-                                                                : (salonServices.find(s => s.id === service.id)?.duration_minutes || service.duration_minutes || service.duracao || '');
-                                                            if (handleUpdateServiceDuration && currentValue !== '') {
-                                                                await handleUpdateServiceDuration(service.id, parseInt(currentValue) || 60);
-                                                                setEditingDuration({...editingDuration, [service.id]: undefined});
-                                                            }
-                                                        }}
-                                                        placeholder="60"
-                                                        className="flex-1 px-3 py-2 rounded-lg border border-green-300 text-sm focus:ring-2 focus:ring-green-400 focus:border-green-400 outline-none"
-                                                    />
-                                                    <span className="text-gray-500 text-sm">min</span>
+                                                
+                                                {/* Campo de Duração Personalizada */}
+                                                <div className="mt-3 pt-3 border-t border-green-200" onClick={(e) => e.stopPropagation()}>
+                                                    <label className="text-xs font-semibold text-gray-600 mb-1 block flex items-center gap-1">
+                                                        <Clock size={12} className="text-green-600" />
+                                                        Duração Personalizada
+                                                    </label>
+                                                    <div className="flex items-center gap-2">
+                                                        <input
+                                                            type="number"
+                                                            min="15"
+                                                            step="15"
+                                                            value={editingDuration[service.id] !== undefined ? editingDuration[service.id] : (salonServices.find(s => s.id === service.id)?.duration_minutes || service.duration_minutes || service.duracao || '')}
+                                                            onChange={(e) => {
+                                                                const value = e.target.value;
+                                                                setEditingDuration({...editingDuration, [service.id]: value});
+                                                            }}
+                                                            onBlur={async () => {
+                                                                const currentValue = editingDuration[service.id] !== undefined 
+                                                                    ? editingDuration[service.id] 
+                                                                    : (salonServices.find(s => s.id === service.id)?.duration_minutes || service.duration_minutes || service.duracao || '');
+                                                                if (handleUpdateServiceDuration && currentValue !== '') {
+                                                                    await handleUpdateServiceDuration(service.id, parseInt(currentValue) || 60);
+                                                                    setEditingDuration({...editingDuration, [service.id]: undefined});
+                                                                }
+                                                            }}
+                                                            placeholder="60"
+                                                            className="flex-1 px-3 py-2 rounded-lg border border-green-300 text-sm focus:ring-2 focus:ring-green-400 focus:border-green-400 outline-none"
+                                                        />
+                                                        <span className="text-gray-500 text-sm">min</span>
+                                                    </div>
+                                                    <p className="text-[10px] text-gray-400 mt-1">Digite a duração em minutos para este serviço</p>
                                                 </div>
-                                                <p className="text-[10px] text-gray-400 mt-1">Digite a duração em minutos para este serviço</p>
-                                            </div>
+                                            </>
                                         )}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })
+                )}
+            </div>
                                     </div>
                                 </div>
                             </div>
