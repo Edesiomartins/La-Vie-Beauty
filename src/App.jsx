@@ -2874,20 +2874,21 @@ export default function App() {
                             
                             // Para cada horário disponível no nosso App (09:00, 10:00...)
                             TIME_SLOTS.forEach(slotTime => {
-                                // Cria uma data completa para esse slot (ex: Hoje às 15:00)
-                                const slotDateTime = new Date(`${selectedDate}T${slotTime}:00-03:00`);
+                                // 1. Define Início e Fim do POSSÍVEL agendamento
+                                const slotStart = new Date(`${selectedDate}T${slotTime}:00-03:00`);
                                 
-                                // Verifica se esse slot cai DENTRO de algum bloqueio
+                                // Pega a duração do serviço escolhido (ou 60min se não tiver)
+                                const duration = selectedService.duration_minutes || selectedService.duracao || 60;
+                                const slotEnd = new Date(slotStart.getTime() + duration * 60000);
+                                
+                                // 2. Verifica COLISÃO com qualquer bloqueio do Google
                                 const isBlocked = data.busy.some(interval => {
                                     const busyStart = new Date(interval.start);
                                     const busyEnd = new Date(interval.end);
                                     
-                                    // Bloqueia se o slot for IGUAL ou DEPOIS do início E ANTES do fim
-                                    // Ex: Evento 14:00 às 16:00
-                                    // 14:00 -> Bloqueado (>= 14:00 e < 16:00)
-                                    // 15:00 -> Bloqueado (>= 14:00 e < 16:00)
-                                    // 16:00 -> Livre (Não é < 16:00)
-                                    return slotDateTime >= busyStart && slotDateTime < busyEnd;
+                                    // FÓRMULA DE COLISÃO PERFEITA:
+                                    // Verifica se os intervalos se "tocam" ou sobrepõem
+                                    return slotStart < busyEnd && slotEnd > busyStart;
                                 });
 
                                 if (isBlocked) {
