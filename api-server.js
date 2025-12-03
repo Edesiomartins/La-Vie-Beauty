@@ -11,6 +11,7 @@ import chatHandler from './api/chat.js';
 import appointmentHandler from './api/create-appointment.js';
 import slotsHandler from './api/get-slots.js';
 import syncHandler from './api/sync-status.js';
+import checkoutHandler from './api/create-checkout.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -43,6 +44,13 @@ app.post('/api/get-slots', async (req, res) => {
 app.post('/api/sync-status', async (req, res) => {
     console.log("🔄 Sincronizando com Google...");
     try { await syncHandler(req, res); } 
+    catch (e) { res.status(500).json({error: e.message}); }
+});
+
+// --- ROTA 3: PAGAMENTO ASAAS ---
+app.post('/api/create-checkout', async (req, res) => {
+    console.log("💰 Iniciando checkout Asaas...");
+    try { await checkoutHandler(req, res); } 
     catch (e) { res.status(500).json({error: e.message}); }
 });
 

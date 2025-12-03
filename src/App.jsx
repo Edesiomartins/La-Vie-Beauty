@@ -943,7 +943,9 @@ const SettingsScreen = ({
     editProfile,
     setEditProfile,
     handleSaveProfile,
-    loading
+    loading,
+    handleSubscribe,
+    loadingPay
 }) => (
     <div className="flex flex-col h-full bg-gradient-to-b from-gray-50 to-gray-100">
         <div className="bg-white p-6 shadow-md sticky top-0 z-10 flex items-center gap-4 border-b border-gray-200">
@@ -965,9 +967,24 @@ const SettingsScreen = ({
                     <div className="flex-1">
                         <p className="font-bold text-lg mb-1">Plano Trial Ativo</p>
                         <p className="text-blue-100 text-sm mb-3">Seu período gratuito expira em 14 dias</p>
-                        <button className="bg-white text-blue-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-blue-50 transition-colors">
-                            Fazer Upgrade
-                        </button>
+                        <div className="flex flex-col gap-2">
+                            {/* Botão Shine */}
+                            <button 
+                                onClick={() => handleSubscribe('shine')}
+                                disabled={loadingPay}
+                                className="w-full bg-amber-500 hover:bg-amber-600 text-white py-3 px-4 rounded-xl text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {loadingPay ? "Gerando..." : "Assinar Shine (R$ 49,90)"}
+                            </button>
+                            {/* Botão Glamour */}
+                            <button 
+                                onClick={() => handleSubscribe('glamour')}
+                                disabled={loadingPay}
+                                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white py-3 px-4 rounded-xl text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {loadingPay ? "Gerando..." : "Ser Glamour (R$ 89,90)"}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2189,6 +2206,7 @@ export default function App() {
     const [view, setView] = useState('landing');
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [loadingPay, setLoadingPay] = useState(false);
 
     const [services, setServices] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -2602,6 +2620,40 @@ export default function App() {
             alert("❌ Erro ao salvar. Tente novamente.");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleSubscribe = async (planType) => {
+        setLoadingPay(true);
+        try {
+            // Pega dados do dono do salão (ou pede pra completar)
+            const userEmail = salonData?.email || prompt("Qual o e-mail para a cobrança?");
+            if (!userEmail) { setLoadingPay(false); return; }
+            
+            const response = await fetch('/api/create-checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: salonData?.name || "Cliente La Vie",
+                    email: userEmail,
+                    phone: salonData?.phone,
+                    planType: planType // 'shine' ou 'glamour'
+                })
+            });
+            
+            const data = await response.json();
+            if (data.paymentUrl) {
+                // Abre o link do Asaas em outra aba
+                window.open(data.paymentUrl, '_blank');
+                alert("A página de pagamento foi aberta! Assim que pagar, avise o suporte para liberação.");
+            } else {
+                alert("Erro ao gerar pagamento: " + (data.error || "Tente novamente"));
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Erro de conexão.");
+        } finally {
+            setLoadingPay(false);
         }
     };
 
@@ -3390,6 +3442,8 @@ export default function App() {
                             setEditProfile={setEditProfile}
                             handleSaveProfile={handleSaveProfile}
                             loading={loading}
+                            handleSubscribe={handleSubscribe}
+                            loadingPay={loadingPay}
                         />
                     )}
 

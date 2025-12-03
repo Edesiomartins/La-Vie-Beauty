@@ -1,0 +1,35 @@
+Você vai precisar do e-mail do robô para isso. O e-mail que está no seu arquivo .env é: la-vie-bot@la-vie---coiffeur.iam.gserviceaccount.com
+
+    Acesse o Google Agenda da conta do Salão.
+
+    No menu lateral esquerdo, ao lado de "Outras agendas", clique no + e depois em Criar nova agenda.
+
+    Nome: Coloque o nome da profissional (ex: Agenda Juliana). Clique em Criar agenda.
+
+    A nova agenda aparecerá na lista à esquerda. Passe o mouse sobre ela, clique nos três pontinhos e escolha Configurações e compartilhamento.
+
+    Desça até a seção "Compartilhar com pessoas específicas".
+
+    Clique em + Adicionar pessoas.
+
+    Cole o e-mail do robô: la-vie-bot@la-vie---coiffeur.iam.gserviceaccount.com.
+
+    Em permissões, selecione "Fazer alterações nos eventos" (ou "Ver todos os detalhes"). Clique em Enviar.
+
+    Nessa mesma tela de configurações, desça a página até o final, na seção "Integrar agenda".
+
+    Copie o código que está no campo ID da agenda (é um código longo, tipo c_188...abc@group.calendar.google.com).
+
+2. No Seu Aplicativo (O Dono cola o ID)
+
+    Abra o seu App La Vie (logado como Proprietário).
+
+    Vá no menu Administração (ícone de engrenagem ou painel).
+
+    Clique em Colaboradores.
+
+    Clique no ícone de Lápis para editar a colaboradora (ex: Juliana Ramos).
+
+    Role até o final do formulário. No campo "Integração Google Agenda", cole o ID que você copiou no passo anterior.
+
+    Clique em Salvar Colaborador (ou "Atualizar").
