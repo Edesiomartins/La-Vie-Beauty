@@ -654,12 +654,14 @@ const ServiceManagementScreen = ({
     loading,
     handleToggleService,
     currentSalonId,
-    handleUpdateServicePrice
+    handleUpdateServicePrice,
+    handleUpdateServiceDuration
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('Todos');
     const [selecting, setSelecting] = useState(false);
     const [editingPrice, setEditingPrice] = useState({});
+    const [editingDuration, setEditingDuration] = useState({});
     
     const categories = ['Todos', ...new Set(globalServices.map(s => s?.category || s?.categoria).filter(Boolean))];
     
@@ -881,6 +883,39 @@ const ServiceManagementScreen = ({
                                                     />
                                                 </div>
                                                 <p className="text-[10px] text-gray-400 mt-1">Digite o valor que deseja cobrar por este serviço</p>
+                                            </div>
+                                            
+                                            {/* Campo de Duração Personalizada */}
+                                            <div className="mt-3 pt-3 border-t border-green-200" onClick={(e) => e.stopPropagation()}>
+                                                <label className="text-xs font-semibold text-gray-600 mb-1 block flex items-center gap-1">
+                                                    <Clock size={12} className="text-green-600" />
+                                                    Duração Personalizada
+                                                </label>
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="number"
+                                                        min="15"
+                                                        step="15"
+                                                        value={editingDuration[service.id] !== undefined ? editingDuration[service.id] : (salonServices.find(s => s.id === service.id)?.duration_minutes || service.duration_minutes || service.duracao || '')}
+                                                        onChange={(e) => {
+                                                            const value = e.target.value;
+                                                            setEditingDuration({...editingDuration, [service.id]: value});
+                                                        }}
+                                                        onBlur={async () => {
+                                                            const currentValue = editingDuration[service.id] !== undefined 
+                                                                ? editingDuration[service.id] 
+                                                                : (salonServices.find(s => s.id === service.id)?.duration_minutes || service.duration_minutes || service.duracao || '');
+                                                            if (handleUpdateServiceDuration && currentValue !== '') {
+                                                                await handleUpdateServiceDuration(service.id, parseInt(currentValue) || 60);
+                                                                setEditingDuration({...editingDuration, [service.id]: undefined});
+                                                            }
+                                                        }}
+                                                        placeholder="60"
+                                                        className="flex-1 px-3 py-2 rounded-lg border border-green-300 text-sm focus:ring-2 focus:ring-green-400 focus:border-green-400 outline-none"
+                                                    />
+                                                    <span className="text-gray-500 text-sm">min</span>
+                                                </div>
+                                                <p className="text-[10px] text-gray-400 mt-1">Digite a duração em minutos para este serviço</p>
                                             </div>
                                         )}
                                     </div>
@@ -2431,6 +2466,23 @@ export default function App() {
         }
     };
 
+    const handleUpdateServiceDuration = async (serviceId, duration) => {
+        if (!currentSalonId) return;
+        
+        try {
+            const serviceRef = doc(db, "salons", currentSalonId, "services", serviceId);
+            await updateDoc(serviceRef, { duration_minutes: duration });
+            
+            // Atualizar estado local
+            setSalonServices(prev => prev.map(s => 
+                s.id === serviceId ? { ...s, duration_minutes: duration } : s
+            ));
+        } catch (error) {
+            console.error("Erro ao atualizar duração:", error);
+            alert("❌ Erro ao atualizar duração. Tente novamente.");
+        }
+    };
+
     const handleToggleService = async (service) => {
         if (!currentSalonId) return;
         
@@ -3325,6 +3377,7 @@ export default function App() {
                             handleToggleService={handleToggleService}
                             currentSalonId={currentSalonId}
                             handleUpdateServicePrice={handleUpdateServicePrice}
+                            handleUpdateServiceDuration={handleUpdateServiceDuration}
                         />
                     )}
 
