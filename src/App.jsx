@@ -1999,192 +1999,125 @@ const ClientFormScreen = ({
     );
 };
 
+// Componente Auxiliar para Botões de Navegação
+const NavButton = ({ icon: Icon, onClick, label }) => (
+    <button 
+        onClick={onClick}
+        className="bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white p-3 rounded-2xl transition-all flex-1 flex flex-col items-center justify-center gap-1 group border border-white/5"
+    >
+        <Icon size={20} className="group-hover:scale-110 transition-transform" />
+    </button>
+);
+
 const AdminScreen = ({
     salonData,
     appointments,
     services,
     setView,
     setCurrentSalonId,
-    selectedAppointments,
-    setSelectedAppointments,
-    handleDeleteSelectedAppointments,
     handleSync,
-    loading
+    handleCancelAppointment
 }) => {
-    const handleToggleAppointment = (appointmentId) => {
-        if (selectedAppointments.includes(appointmentId)) {
-            setSelectedAppointments(selectedAppointments.filter(id => id !== appointmentId));
-        } else {
-            setSelectedAppointments([...selectedAppointments, appointmentId]);
-        }
-    };
+    // Estado local para loading do sync
+    const [localLoading, setLocalLoading] = useState(false);
 
-    const handleSelectAll = () => {
-        if (selectedAppointments.length === appointments.length) {
-            setSelectedAppointments([]);
+    // Função interna de sync para controlar o loading local do botão
+    const onSyncClick = async () => {
+        setLocalLoading(true);
+        if (handleSync) {
+            await handleSync();
         } else {
-            setSelectedAppointments(appointments.map(app => app.id));
+            setTimeout(() => alert("Função de Sync precisa ser passada via props!"), 500);
         }
+        setLocalLoading(false);
     };
 
     return (
-    <div className="flex flex-col h-full bg-gradient-to-b from-gray-50 to-white">
-        <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6 pt-12 pb-8 rounded-b-[40px] shadow-2xl">
-            {/* Título centralizado no topo */}
-            <div className="text-center mb-4">
-                <h1 className="text-xl font-black text-white mb-1 flex items-center justify-center gap-2">
-                    <Settings size={18} />
-                    Painel Administrativo
-                </h1>
-                <p className="text-gray-300 text-sm">{salonData?.name}</p>
-            </div>
-
-            {/* Botões de navegação e sair */}
-            <div className="flex justify-between items-center mb-6">
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => setView('client-management')}
-                        className="bg-pink-500 text-white p-3 rounded-2xl shadow-lg hover:bg-pink-600 transition-all"
-                        title="Clientes"
-                    >
-                        <User size={20} />
-                    </button>
-                    <button onClick={() => setView('collaborator-management')} className="bg-white/10 backdrop-blur-sm p-3 rounded-2xl hover:bg-white/20 transition-all" title="Colaboradores">
-                        <Users size={20} />
-                    </button>
-                    <button onClick={() => setView('service-management')} className="bg-white/10 backdrop-blur-sm p-3 rounded-2xl hover:bg-white/20 transition-all" title="Serviços">
-                        <List size={20} />
-                    </button>
-                    <button onClick={() => setView('settings')} className="bg-white/10 backdrop-blur-sm p-3 rounded-2xl hover:bg-white/20 transition-all" title="Configurações">
-                        <Settings size={20} />
-                    </button>
-                    <button 
-                        onClick={handleSync}
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-lg ml-2"
-                        title="Sincronizar com Google Calendar"
-                    >
-                        <Zap size={18} />
-                        Sincronizar
-                    </button>
-                </div>
-                <button 
-                    onClick={() => {setCurrentSalonId(null); setView('landing')}} 
-                    className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 transition-all shadow-lg"
-                >
-                    <LogOut size={18} />
-                    Sair
-                </button>
-            </div>
-
-            <div className="flex gap-3">
-                <StatCard icon={Calendar} label="Agendamentos" value={appointments.length} color="pink" />
-                <StatCard icon={Sparkles} label="Serviços" value={services.length} color="purple" />
-            </div>
-        </div>
-
-        <div className="p-6 flex-1 overflow-y-auto -mt-6">
-            <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-gray-800 text-lg flex items-center gap-2">
-                    <Calendar size={20} className="text-pink-500" />
-                    Agenda do Dia
-                </h3>
-                <div className="flex items-center gap-2">
-                    {selectedAppointments.length > 0 && (
-                        <button
-                            onClick={handleDeleteSelectedAppointments}
-                            disabled={loading}
-                            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-lg disabled:opacity-50"
-                        >
-                            <Trash2 size={14} />
-                            Excluir ({selectedAppointments.length})
-                        </button>
-                    )}
-                    {appointments.length > 0 && (
-                        <button
-                            onClick={handleSelectAll}
-                            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-bold transition-all"
-                        >
-                            {selectedAppointments.length === appointments.length ? 'Desmarcar Todos' : 'Selecionar Todos'}
-                        </button>
-                    )}
-                    <span className="bg-pink-100 text-pink-700 px-3 py-1 rounded-full text-xs font-bold">
-                        {appointments.length} agendamentos
-                    </span>
-                </div>
-            </div>
-
-            {appointments.length === 0 ? (
-                <div className="text-center py-20">
-                    <div className="w-20 h-20 bg-gray-100 rounded-3xl flex items-center justify-center mx-auto mb-4">
-                        <Calendar className="text-gray-400" size={36}/>
+        <div className="flex flex-col h-full bg-gradient-to-b from-gray-50 to-white">
+            <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6 pt-10 pb-8 rounded-b-[40px] shadow-2xl">
+                
+                {/* LINHA 1: Título e Sair */}
+                <div className="flex justify-between items-start mb-6">
+                    <div>
+                        <h1 className="text-xl font-black text-white flex items-center gap-2">
+                            <Settings size={20} className="text-pink-500" />
+                            Painel Admin
+                        </h1>
+                        <p className="text-gray-400 text-xs mt-1 font-medium">{salonData?.name}</p>
                     </div>
-                    <p className="text-gray-500 font-medium">Nenhum agendamento hoje</p>
-                    <p className="text-gray-400 text-xs mt-1">Os novos agendamentos aparecerão aqui</p>
+                    
+                    <button 
+                        onClick={() => {setCurrentSalonId(null); setView('landing')}} 
+                        className="bg-white/10 hover:bg-red-500/20 text-white p-2.5 rounded-xl transition-all border border-white/5 hover:border-red-500/50 group"
+                        title="Sair"
+                    >
+                        <LogOut size={20} className="group-hover:text-red-400 transition-colors" />
+                    </button>
                 </div>
-            ) : (
-                <div className="space-y-3">
-                    {appointments.map(app => (
-                        <div key={app.id} className={`bg-white p-5 rounded-3xl shadow-md border-l-4 ${selectedAppointments.includes(app.id) ? 'border-blue-500 bg-blue-50' : 'border-green-500'} hover:shadow-xl transition-all duration-200 group`}>
-                            <div className="flex justify-between items-start">
-                                <div className="flex gap-3 items-start">
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedAppointments.includes(app.id)}
-                                        onChange={() => handleToggleAppointment(app.id)}
-                                        className="mt-1 w-5 h-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
-                                    />
-                                </div>
-                                <div className="flex gap-4 flex-1">
-                                    <div className="text-center">
-                                        <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-emerald-100 rounded-2xl flex items-center justify-center mb-2">
-                                            <span className="text-2xl font-black text-green-600">{app.time}</span>
-                                        </div>
-                                        <span className="text-[10px] text-gray-500 font-medium">
-                                            {new Date(app.date + 'T00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
-                                        </span>
+                {/* LINHA 2: Barra de Navegação (Ícones Uniformes) */}
+                <div className="flex justify-between gap-2">
+                    <NavButton icon={User} onClick={() => setView('client-management')} label="Clientes" />
+                    <NavButton icon={Users} onClick={() => setView('collaborator-management')} label="Equipe" />
+                    <NavButton icon={List} onClick={() => setView('service-management')} label="Serviços" />
+                    <NavButton icon={Settings} onClick={() => setView('settings')} label="Config" />
+                    
+                    {/* Botão Sync Destacado */}
+                    <button 
+                        onClick={onSyncClick}
+                        disabled={localLoading}
+                        className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white p-3 rounded-2xl shadow-lg hover:shadow-blue-500/30 active:scale-95 transition-all w-12 h-12 flex items-center justify-center border border-white/10"
+                        title="Sincronizar Google"
+                    >
+                        {localLoading ? <Loader2 size={20} className="animate-spin" /> : <Zap size={20} fill="currentColor" />}
+                    </button>
+                </div>
+                {/* Resumo Rápido */}
+                <div className="flex gap-3 mt-6">
+                    <StatCard icon={Calendar} label="Agenda" value={appointments.length} color="pink" />
+                    <StatCard icon={Sparkles} label="Serviços" value={services.length} color="purple" />
+                </div>
+            </div>
+            {/* Lista de Agendamentos */}
+            <div className="p-6 flex-1 overflow-y-auto -mt-4">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-bold text-gray-800 text-lg flex items-center gap-2">
+                        <Calendar size={20} className="text-pink-500" />
+                        Agenda Hoje
+                    </h3>
+                </div>
+                {appointments.length === 0 ? (
+                    <div className="text-center py-12 opacity-60">
+                        <Calendar className="mx-auto text-gray-400 mb-2" size={40}/>
+                        <p className="text-gray-500 text-sm">Sem agendamentos</p>
+                    </div>
+                ) : (
+                    <div className="space-y-3 pb-20">
+                        {appointments.map(app => (
+                            <div key={app.id} className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition-all flex justify-between items-center group">
+                                <div className="flex gap-4 items-center">
+                                    <div className="w-14 h-14 bg-green-50 rounded-2xl flex flex-col items-center justify-center text-green-700 border border-green-100">
+                                        <span className="text-lg font-black">{app.time}</span>
                                     </div>
-                                    <div className="flex-1">
-                                        <h4 className="font-bold text-gray-800 text-base mb-1">{app.serviceName}</h4>
-                                        <p className="text-gray-500 text-sm flex items-center gap-1 mb-1">
-                                            <User size={12} />
-                                            {app.clientName}
-                                        </p>
-                                        {/* ADICIONAR TELEFONE ↓ */}
-                                        {app.clientPhone && (
-                                            <p className="text-gray-400 text-xs flex items-center gap-1 mb-1">
-                                                <Phone size={10} />
-                                                {app.clientPhone}
-                                            </p>
-                                        )}
-                                        {app.collaboratorName && (
-                                            <p className="text-purple-600 text-sm flex items-center gap-1 mb-2">
-                                                <Users size={12} />
-                                                <strong>{app.collaboratorName}</strong>
-                                            </p>
-                                        )}
-                                        <div className="flex items-center gap-2">
-                                            <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-[10px] font-bold">
-                                                ✓ Confirmado
-                                            </span>
-                                            {app.servicePrice && app.servicePrice > 0 ? (
-                                                <span className="text-pink-600 font-bold text-sm">
-                                                    R$ {app.servicePrice}
-                                                </span>
-                                            ) : (
-                                                <span className="text-gray-400 text-xs italic">
-                                                    Consulte valores
-                                                </span>
-                                            )}
-                                        </div>
+                                    <div>
+                                        <h4 className="font-bold text-gray-800 text-sm">{app.clientName}</h4>
+                                        <p className="text-gray-500 text-xs">{app.serviceName}</p>
+                                        <p className="text-purple-600 text-[10px] font-bold mt-0.5">{app.collaboratorName}</p>
                                     </div>
                                 </div>
+                                
+                                {/* Botão de Deletar (Lixeira) */}
+                                <button 
+                                    onClick={() => handleCancelAppointment(app)}
+                                    className="p-2.5 bg-gray-50 text-gray-400 rounded-xl hover:bg-red-50 hover:text-red-500 transition-colors"
+                                >
+                                    <Trash2 size={18} />
+                                </button>
                             </div>
-                        </div>
-                    ))}
-                </div>
-            )}
+                        ))}
+                    </div>
+                )}
+            </div>
         </div>
-    </div>
     );
 };
 
@@ -3052,6 +2985,25 @@ export default function App() {
         }
     };
 
+    // Função para cancelar um agendamento individual
+    const handleCancelAppointment = async (appointment) => {
+        if (!confirm(`⚠️ Tem certeza que deseja cancelar o agendamento de ${appointment.clientName}?`)) {
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const appointmentRef = doc(db, "salons", currentSalonId, "appointments", appointment.id);
+            await deleteDoc(appointmentRef);
+            alert(`✅ Agendamento cancelado com sucesso!`);
+        } catch (error) {
+            console.error("Erro ao cancelar agendamento:", error);
+            alert("❌ Erro ao cancelar agendamento. Tente novamente.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Função para limpar agendamentos fantasmas
     const handleSync = async () => {
         if (appointments.length === 0) return;
@@ -3432,11 +3384,8 @@ export default function App() {
                             services={services}
                             setView={setView}
                             setCurrentSalonId={setCurrentSalonId}
-                            selectedAppointments={selectedAppointments}
-                            setSelectedAppointments={setSelectedAppointments}
-                            handleDeleteSelectedAppointments={handleDeleteSelectedAppointments}
                             handleSync={handleSync}
-                            loading={loading}
+                            handleCancelAppointment={handleCancelAppointment}
                         />
                     )}
 
