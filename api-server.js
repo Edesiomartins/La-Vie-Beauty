@@ -1,15 +1,15 @@
 // api-server.js
+import 'dotenv/config'; 
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 
-// Importa os manipuladores (handlers)
+// Importa os handlers
 import chatHandler from './api/chat.js';
-import appointmentHandler from './api/create-appointment.js'; // <--- O SERVIDOR PRECISA DISSO
-
-// Tenta carregar .env.local primeiro, depois .env
-dotenv.config({ path: '.env.local' });
-dotenv.config();
+import appointmentHandler from './api/create-appointment.js';
+import slotsHandler from './api/get-slots.js'; // <--- NOVO IMPORT
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,36 +17,30 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Rota de Teste
-app.get('/', (req, res) => {
-  res.send('✅ Servidor Backend La Vie está rodando!');
-});
+app.get('/', (req, res) => res.send('✅ Backend La Vie Rodando!'));
 
-// --- ROTA 1: CHAT (Juliana) ---
+// Rotas
 app.post('/api/chat', async (req, res) => {
-  try {
-    await chatHandler(req, res);
-  } catch (error) {
-    console.error('Erro no Chat:', error);
-    res.status(500).json({ error: 'Erro interno no servidor de chat' });
-  }
+    try { await chatHandler(req, res); } 
+    catch (e) { console.error(e); res.status(500).json({error: e.message}); }
 });
 
-// --- ROTA 2: AGENDAMENTO (Google Agenda) ---
-// Essa é a parte que estava faltando no seu arquivo atual
 app.post('/api/create-appointment', async (req, res) => {
-  console.log("📅 NOVO PEDIDO: Agendando para", req.body.clientName);
-  try {
-    await appointmentHandler(req, res);
-  } catch (error) {
-    console.error('Erro no Agendamento:', error);
-    res.status(500).json({ error: 'Erro interno no servidor de agendamento' });
-  }
+    console.log("📅 Criando agendamento...");
+    try { await appointmentHandler(req, res); } 
+    catch (e) { console.error(e); res.status(500).json({error: e.message}); }
 });
 
-// Inicia o servidor
+// --- NOVA ROTA PARA LER HORÁRIOS ---
+app.post('/api/get-slots', async (req, res) => {
+    console.log("🔎 Verificando horários no Google...");
+    try { await slotsHandler(req, res); } 
+    catch (e) { console.error(e); res.status(500).json({error: e.message}); }
+});
+
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor Backend rodando em http://localhost:${PORT}`);
-  console.log(`✨ Rota de Chat ATIVA: http://localhost:${PORT}/api/chat`);
-  console.log(`📅 Rota de Agenda ATIVA: http://localhost:${PORT}/api/create-appointment`);
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
+  console.log(`   - Chat: OK`);
+  console.log(`   - Agenda (Escrever): OK`);
+  console.log(`   - Slots (Ler): OK`);
 });

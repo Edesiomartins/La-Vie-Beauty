@@ -1147,8 +1147,8 @@ const BookingScreen = ({
     // Verificar se um horário está ocupado
     const isTimeBooked = (time) => {
         if (!selectedDate || !selectedCollaborator) return false;
-        const key = `${selectedDate}_${time}_${selectedCollaborator.id}`;
-        return bookedTimes.has(key);
+        // Agora bookedTimes contém apenas os horários (ex: '14:00')
+        return bookedTimes.has(time);
     };
 
     return (
@@ -2829,41 +2829,63 @@ export default function App() {
     // Estado para horários ocupados
     const [bookedTimes, setBookedTimes] = useState(new Set());
 
-    // Buscar agendamentos existentes para verificar horários ocupados
+    // Buscar horários ocupados (Google + Firebase)
     useEffect(() => {
         if (!currentSalonId || !selectedDate || !selectedCollaborator) {
             setBookedTimes(new Set());
             return;
         }
 
-        const fetchBookedTimes = async () => {
+        const fetchAllBusyTimes = async () => {
+            const newBusySet = new Set();
+
+            // 1. Busca no Firebase (Agendamentos do próprio App)
             try {
-                const appointmentsRef = collection(db, "salons", currentSalonId, "appointments");
                 const q = query(
-                    appointmentsRef,
+                    collection(db, "salons", currentSalonId, "appointments"),
                     where("date", "==", selectedDate),
                     where("collaboratorId", "==", selectedCollaborator.id),
                     where("status", "==", "confirmado")
                 );
-                
-                const querySnapshot = await getDocs(q);
-                const booked = new Set();
-                
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    if (data.time && data.collaboratorId) {
-                        const key = `${data.date}_${data.time}_${data.collaboratorId}`;
-                        booked.add(key);
-                    }
+                const snapshot = await getDocs(q);
+                snapshot.forEach(doc => {
+                    if (doc.data().time) newBusySet.add(doc.data().time);
                 });
-                
-                setBookedTimes(booked);
-            } catch (error) {
-                console.error("Erro ao buscar horários ocupados:", error);
+            } catch (e) { console.error("Erro Firebase:", e); }
+
+            // 2. Busca no Google Agenda (NOVO!)
+            if (selectedCollaborator.googleCalendarId) {
+                try {
+                    const response = await fetch('/api/get-slots', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            googleCalendarId: selectedCollaborator.googleCalendarId,
+                            date: selectedDate
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        // O Google retorna horários exatos (ex: 14:00). 
+                        // Vamos marcar como ocupado no nosso Set
+                        if (data.busy) {
+                            data.busy.forEach(time => {
+                                // Adiciona o horário exato ocupado (Ex: '16:00')
+                                newBusySet.add(time);
+                                
+                                // Opcional: Se quiser bloquear a hora seguinte também (ex: serviço de 1h)
+                                // você pode adicionar lógica aqui. Por enquanto bloqueia o início.
+                            });
+                        }
+                    }
+                } catch (e) { console.error("Erro Google Slots:", e); }
             }
+
+            setBookedTimes(newBusySet);
         };
 
-        fetchBookedTimes();
+        fetchAllBusyTimes();
     }, [currentSalonId, selectedDate, selectedCollaborator]);
 
     // ATUALIZAR: Criar agendamento com dados do cliente cadastrado e verificação de conflito
@@ -2880,8 +2902,7 @@ export default function App() {
         }
 
         // Verificar se o horário já está ocupado
-        const appointmentKey = `${selectedDate}_${selectedTime}_${selectedCollaborator.id}`;
-        if (bookedTimes.has(appointmentKey)) {
+        if (bookedTimes.has(selectedTime)) {
             alert("⚠️ Este horário já está ocupado. Por favor, escolha outro horário.");
             return;
         }
@@ -2904,7 +2925,7 @@ export default function App() {
                 setLoading(false);
                 // Atualizar lista de horários ocupados
                 const booked = new Set(bookedTimes);
-                booked.add(appointmentKey);
+                booked.add(selectedTime);
                 setBookedTimes(booked);
                 return;
             }

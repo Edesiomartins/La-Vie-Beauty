@@ -14,7 +14,7 @@ if (fs.existsSync('.env.local')) {
 }
 
 // SEU ID DA AGENDA (O que você mandou)
-const CALENDAR_ID = "c1aecb3e7e90ea4a37a6cc8929bae6158f4d7e0b3a6564bbf423eda10e803baf@group.calendar.google.com";
+const CALENDAR_ID = "kamillasrb@gmail.com";
 const DATE_TO_TEST = "2025-11-29"; // Hoje
 
 async function testConnection() {
