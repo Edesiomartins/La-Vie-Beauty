@@ -2,7 +2,7 @@
 import { google } from 'googleapis';
 import dotenv from 'dotenv';
 
-// Carrega variáveis
+// Tenta carregar .env.local (ambiente de desenvolvimento)
 dotenv.config({ path: '.env.local' });
 dotenv.config();
 
@@ -18,11 +18,14 @@ export default async function handler(req, res) {
   const { googleCalendarId, date } = req.body;
 
   if (!googleCalendarId || !date) {
-    return res.status(400).json({ error: 'Faltando ID da agenda ou data' });
+    return res.status(400).json({ error: 'Faltando ID ou Data' });
   }
 
   try {
-    // 1. Autenticação (A mesma que funcionou no teste)
+    if (!process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
+        throw new Error("Chaves do Google não configuradas.");
+    }
+
     let privateKey = process.env.GOOGLE_PRIVATE_KEY;
     if (privateKey.startsWith('"') && privateKey.endsWith('"')) privateKey = privateKey.slice(1, -1);
     privateKey = privateKey.replace(/\\n/g, '\n');
@@ -37,9 +40,9 @@ export default async function handler(req, res) {
 
     const calendar = google.calendar({ version: 'v3', auth });
 
-    // 2. Consulta (FreeBusy) das 08h as 20h
-    const timeMin = new Date(`${date}T08:00:00-03:00`).toISOString();
-    const timeMax = new Date(`${date}T20:00:00-03:00`).toISOString();
+    // Busca o dia inteiro (00:00 às 23:59)
+    const timeMin = new Date(`${date}T00:00:00-03:00`).toISOString();
+    const timeMax = new Date(`${date}T23:59:59-03:00`).toISOString();
 
     const response = await calendar.freebusy.query({
       resource: {
@@ -50,21 +53,18 @@ export default async function handler(req, res) {
       },
     });
 
-    const busySlots = response.data.calendars[googleCalendarId].busy;
+    const calendarData = response.data.calendars[googleCalendarId];
     
-    // 3. Formata para devolver apenas a lista de horários simples
-    // Ex: ['14:00', '15:00'] (Formato HH:MM consistente)
-    const busyTimes = busySlots.map(slot => {
-        const dateObj = new Date(slot.start);
-        const hours = String(dateObj.getHours()).padStart(2, '0');
-        const minutes = String(dateObj.getMinutes()).padStart(2, '0');
-        return `${hours}:${minutes}`;
-    });
+    if (calendarData.errors) {
+        console.error("Erro Google:", calendarData.errors);
+        return res.status(200).json({ busy: [], error: "Erro de permissão" });
+    }
 
-    return res.status(200).json({ busy: busyTimes, raw: busySlots });
+    // Retorna a lista crua de intervalos ocupados: [{ start: '...', end: '...' }]
+    return res.status(200).json({ busy: calendarData.busy });
 
   } catch (error) {
-    console.error('Erro ao ler slots do Google:', error);
+    console.error('Erro API Slots:', error.message);
     return res.status(500).json({ error: error.message });
   }
 }

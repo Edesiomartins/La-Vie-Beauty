@@ -2839,7 +2839,7 @@ export default function App() {
         const fetchAllBusyTimes = async () => {
             const newBusySet = new Set();
 
-            // 1. Busca no Firebase (Agendamentos do próprio App)
+            // 1. Bloqueia horários do próprio App (Firebase)
             try {
                 const q = query(
                     collection(db, "salons", currentSalonId, "appointments"),
@@ -2849,11 +2849,12 @@ export default function App() {
                 );
                 const snapshot = await getDocs(q);
                 snapshot.forEach(doc => {
+                    // Adiciona o horário exato do agendamento (ex: "14:00")
                     if (doc.data().time) newBusySet.add(doc.data().time);
                 });
             } catch (e) { console.error("Erro Firebase:", e); }
 
-            // 2. Busca no Google Agenda (NOVO!)
+            // 2. Bloqueia intervalos do Google Agenda
             if (selectedCollaborator.googleCalendarId) {
                 try {
                     const response = await fetch('/api/get-slots', {
@@ -2867,15 +2868,31 @@ export default function App() {
                     
                     if (response.ok) {
                         const data = await response.json();
-                        // O Google retorna horários exatos (ex: 14:00). 
-                        // Vamos marcar como ocupado no nosso Set
-                        if (data.busy) {
-                            data.busy.forEach(time => {
-                                // Adiciona o horário exato ocupado (Ex: '16:00')
-                                newBusySet.add(time);
+                        
+                        // data.busy é uma lista de intervalos: [{start: '...', end: '...'}, ...]
+                        if (data.busy && data.busy.length > 0) {
+                            
+                            // Para cada horário disponível no nosso App (09:00, 10:00...)
+                            TIME_SLOTS.forEach(slotTime => {
+                                // Cria uma data completa para esse slot (ex: Hoje às 15:00)
+                                const slotDateTime = new Date(`${selectedDate}T${slotTime}:00-03:00`);
                                 
-                                // Opcional: Se quiser bloquear a hora seguinte também (ex: serviço de 1h)
-                                // você pode adicionar lógica aqui. Por enquanto bloqueia o início.
+                                // Verifica se esse slot cai DENTRO de algum bloqueio
+                                const isBlocked = data.busy.some(interval => {
+                                    const busyStart = new Date(interval.start);
+                                    const busyEnd = new Date(interval.end);
+                                    
+                                    // Bloqueia se o slot for IGUAL ou DEPOIS do início E ANTES do fim
+                                    // Ex: Evento 14:00 às 16:00
+                                    // 14:00 -> Bloqueado (>= 14:00 e < 16:00)
+                                    // 15:00 -> Bloqueado (>= 14:00 e < 16:00)
+                                    // 16:00 -> Livre (Não é < 16:00)
+                                    return slotDateTime >= busyStart && slotDateTime < busyEnd;
+                                });
+
+                                if (isBlocked) {
+                                    newBusySet.add(slotTime);
+                                }
                             });
                         }
                     }

@@ -31,8 +31,14 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. Configurar Autenticação (Igual ao Chat)
+    // --- VERIFICAÇÃO DE SEGURANÇA ---
+    if (!process.env.GOOGLE_CLIENT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
+        throw new Error("CONFIGURAÇÃO: As chaves do Google (Email ou Private Key) não estão configuradas no Painel da Vercel.");
+    }
+
+    // 1. Configurar Autenticação
     let privateKey = process.env.GOOGLE_PRIVATE_KEY;
+    // O erro acontecia aqui embaixo, agora protegemos com o 'if' acima
     if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
         privateKey = privateKey.slice(1, -1);
     }
