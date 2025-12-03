@@ -853,7 +853,7 @@ const ServiceManagementScreen = ({
                                         
                                         {/* Campo de Preço Personalizado - só aparece quando ativo */}
                                         {isActive && (
-                                            <>
+                                            <React.Fragment>
                                                 <div className="mt-3 pt-3 border-t border-green-200" onClick={(e) => e.stopPropagation()}>
                                                     <label className="text-xs font-semibold text-gray-600 mb-1 block flex items-center gap-1">
                                                         <DollarSign size={12} className="text-green-600" />
@@ -918,15 +918,8 @@ const ServiceManagementScreen = ({
                                                     </div>
                                                     <p className="text-[10px] text-gray-400 mt-1">Digite a duração em minutos para este serviço</p>
                                                 </div>
-                                            </>
+                                            </React.Fragment>
                                         )}
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })
-                )}
-            </div>
                                     </div>
                                 </div>
                             </div>
