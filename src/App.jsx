@@ -2196,157 +2196,479 @@ const SuccessScreen = ({ setView, setCurrentSalonId }) => (
 );
 
 const FinancialScreen = ({ setView, salonData, clientCount, collaboratorCount }) => {
-    // SEUS LINKS DO ASAAS
-    const LINK_SHINE = "https://www.asaas.com/c/LINK_PLANO_SHINE"; 
-    const LINK_GLAMOUR = "https://www.asaas.com/c/LINK_PLANO_GLAMOUR"; 
-    
-    // --- CONFIGURAÇÃO DOS NOMES ---
+
+    // Estados para controle do pagamento
+
+    const [loadingPay, setLoadingPay] = useState(false);
+
+    const [showModal, setShowModal] = useState(false);
+
+    const [selectedPlan, setSelectedPlan] = useState(null);
+
+    const [cpfCnpj, setCpfCnpj] = useState('');
+
+
+
+    // Configuração visual dos planos
+
     const planDetails = {
+
         free: { name: 'Basic', color: 'bg-gray-500', icon: Lock },
+
         pro: { name: 'Shine ✨', color: 'bg-amber-500', icon: Sparkles },
+
         premium: { name: 'Glamour 💎', color: 'bg-fuchsia-600', icon: Star }
+
     };
-    
+
+
+
     const currentPlan = salonData?.plan || 'free';
+
     const currentDetails = planDetails[currentPlan] || planDetails.free;
-    
-    // Limites
+
+
+
+    // Limites dos planos
+
     const getLimits = () => {
+
         if (currentPlan === 'free') return { client: 30, collab: 2 };
+
         if (currentPlan === 'pro') return { client: 90, collab: 5 };
+
         return { client: 9999, collab: 9999 };
+
     };
-    
+
     const limits = getLimits();
+
     const calcPercent = (current, max) => Math.min((current / max) * 100, 100);
-    
+
+
+
+    // Formata CPF/CNPJ enquanto digita
+
+    const handleCpfChange = (e) => {
+
+        let value = e.target.value.replace(/\D/g, '');
+
+        if (value.length <= 11) {
+
+            value = value.replace(/(\d{3})(\d)/, '$1.$2');
+
+            value = value.replace(/(\d{3})(\d)/, '$1.$2');
+
+            value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+
+        } else {
+
+            value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+
+            value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+
+            value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
+
+            value = value.replace(/(\d{4})(\d)/, '$1-$2');
+
+        }
+
+        setCpfCnpj(value);
+
+    };
+
+
+
+    // 1. Abre o Modal quando clica no botão do plano
+
+    const handleOpenCheckout = (planType) => {
+
+        setSelectedPlan(planType);
+
+        setShowModal(true);
+
+    };
+
+
+
+    // 2. Envia os dados para a API (Processo Real)
+
+    const handleConfirmPayment = async () => {
+
+        if (cpfCnpj.length < 14) { // Validação simples
+
+            alert("Por favor, digite um CPF ou CNPJ válido.");
+
+            return;
+
+        }
+
+
+
+        setLoadingPay(true);
+
+        try {
+
+            // Pega o email do dono (ou pede se não tiver)
+
+            const userEmail = salonData?.email || prompt("Qual o e-mail para receber a cobrança?");
+
+            if (!userEmail) { setLoadingPay(false); return; }
+
+
+
+            const response = await fetch('/api/create-checkout', {
+
+                method: 'POST',
+
+                headers: { 'Content-Type': 'application/json' },
+
+                body: JSON.stringify({
+
+                    name: salonData?.name || "Cliente La Vie",
+
+                    email: userEmail,
+
+                    phone: salonData?.phone,
+
+                    cpfCnpj: cpfCnpj.replace(/\D/g, ''), // Envia apenas números
+
+                    planType: selectedPlan
+
+                })
+
+            });
+
+
+
+            const data = await response.json();
+
+
+
+            if (data.paymentUrl) {
+
+                // Sucesso! Fecha modal e abre link
+
+                setShowModal(false);
+
+                window.open(data.paymentUrl, '_blank');
+
+                alert("🎉 Fatura gerada! A página de pagamento foi aberta.\nApós pagar, o sistema libera seu acesso automaticamente.");
+
+            } else {
+
+                alert("Erro ao gerar pagamento: " + (data.error || "Verifique os dados e tente novamente."));
+
+            }
+
+
+
+        } catch (error) {
+
+            console.error(error);
+
+            alert("Erro de conexão. Tente novamente.");
+
+        } finally {
+
+            setLoadingPay(false);
+
+        }
+
+    };
+
+
+
     return (
-        <div className="flex flex-col h-full bg-gradient-to-b from-gray-50 to-white">
+
+        <div className="flex flex-col h-full bg-gradient-to-b from-gray-50 to-white relative">
+
             {/* Cabeçalho */}
+
             <div className="bg-gradient-to-br from-gray-900 to-gray-800 p-6 pt-12 pb-8 rounded-b-[32px] shadow-xl">
+
                 <button onClick={() => setView('admin')} className="text-white/80 hover:text-white mb-4 flex items-center gap-2 text-sm">
+
                     <X size={18} /> Voltar
+
                 </button>
+
                 <h2 className="text-2xl font-black text-white mb-1">Assinatura</h2>
+
                 <p className="text-gray-400 text-sm">Evolua seu salão com o La Vie</p>
+
             </div>
-            
+
+
+
             <div className="p-6 space-y-6 overflow-y-auto pb-10">
-                {/* CARD DO STATUS ATUAL */}
+
+                {/* Status Atual */}
+
                 <div className="bg-white p-5 rounded-3xl shadow-md border border-gray-100">
+
                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-bold text-gray-800 text-sm uppercase tracking-wider">Seu Plano Atual</h3>
+
+                        <h3 className="font-bold text-gray-800 text-sm uppercase tracking-wider">Plano Atual</h3>
+
                         <span className={`${currentDetails.color} text-white px-3 py-1 rounded-full text-xs font-bold uppercase shadow-sm`}>
+
                             {currentDetails.name}
+
                         </span>
+
                     </div>
-                    
+
                     {/* Barras de Consumo */}
+
                     <div className="space-y-4">
-                        {/* Colaboradores */}
+
                         <div>
+
                             <div className="flex justify-between text-xs mb-1 text-gray-500">
+
                                 <span className="flex items-center gap-1"><Users size={12}/> Equipe</span>
+
                                 <span>{collaboratorCount} / {currentPlan === 'premium' ? '∞' : limits.collab}</span>
+
                             </div>
+
                             <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                                <div 
-                                    className={`h-full ${collaboratorCount >= limits.collab && currentPlan !== 'premium' ? 'bg-red-500' : 'bg-blue-500'}`} 
-                                    style={{ width: `${calcPercent(collaboratorCount, limits.collab)}%` }}
-                                ></div>
+
+                                <div className={`h-full ${collaboratorCount >= limits.collab && currentPlan !== 'premium' ? 'bg-red-500' : 'bg-blue-500'}`} style={{ width: `${calcPercent(collaboratorCount, limits.collab)}%` }}></div>
+
                             </div>
+
                         </div>
-                        
-                        {/* Clientes */}
+
                         <div>
+
                             <div className="flex justify-between text-xs mb-1 text-gray-500">
+
                                 <span className="flex items-center gap-1"><User size={12}/> Clientes</span>
+
                                 <span>{clientCount} / {currentPlan === 'premium' ? '∞' : limits.client}</span>
+
                             </div>
+
                             <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                                <div 
-                                    className={`h-full ${clientCount >= limits.client && currentPlan !== 'premium' ? 'bg-red-500' : 'bg-purple-500'}`} 
-                                    style={{ width: `${calcPercent(clientCount, limits.client)}%` }}
-                                ></div>
+
+                                <div className={`h-full ${clientCount >= limits.client && currentPlan !== 'premium' ? 'bg-red-500' : 'bg-purple-500'}`} style={{ width: `${calcPercent(clientCount, limits.client)}%` }}></div>
+
                             </div>
+
                         </div>
+
                     </div>
+
                 </div>
-                
-                {/* TÍTULO DE UPGRADE */}
+
+
+
                 {currentPlan !== 'premium' && (
-                    <h3 className="font-bold text-gray-800 text-lg px-1">Disponíveis para você</h3>
+
+                    <h3 className="font-bold text-gray-800 text-lg px-1">Escolha seu plano</h3>
+
                 )}
-                
-                {/* --- PLANO SHINE (R$ 49,90) --- */}
+
+
+
+                {/* --- PLANO SHINE --- */}
+
                 {currentPlan === 'free' && (
+
                     <div className="bg-gradient-to-br from-amber-100 to-yellow-50 p-5 rounded-3xl shadow-lg border border-amber-200 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 bg-amber-400 text-white px-3 py-1 rounded-bl-xl text-[10px] font-bold shadow-sm">
-                            MAIS POPULAR
-                        </div>
+
+                        <div className="absolute top-0 right-0 bg-amber-400 text-white px-3 py-1 rounded-bl-xl text-[10px] font-bold shadow-sm">MAIS POPULAR</div>
+
                         <div className="flex items-center gap-2 mb-2">
+
                             <Sparkles size={24} className="text-amber-500" fill="currentColor" />
+
                             <h4 className="text-xl font-black text-amber-600">Shine</h4>
+
                         </div>
-                        <p className="text-amber-700/80 text-xs mb-4 font-medium">Ideal para crescer com brilho.</p>
-                        
+
+                        <p className="text-amber-700/80 text-xs mb-4 font-medium">Crescimento com brilho.</p>
+
                         <ul className="space-y-2 text-sm text-amber-800 mb-5">
+
                             <li className="flex items-center gap-2"><CheckCircle size={14} className="text-amber-500"/> Até <b>5</b> Colaboradores</li>
+
                             <li className="flex items-center gap-2"><CheckCircle size={14} className="text-amber-500"/> Até <b>90</b> Clientes</li>
-                            <li className="flex items-center gap-2"><CheckCircle size={14} className="text-amber-500"/> Painel Administrativo Pro</li>
+
                         </ul>
-                        
+
                         <button 
-                            onClick={() => window.open(LINK_SHINE, '_blank')}
-                            className="w-full bg-gradient-to-r from-pink-500 to-fuchsia-600 text-white py-3 rounded-xl font-bold hover:shadow-pink-500/40 hover:shadow-lg transition-all transform active:scale-95"
+
+                            onClick={() => handleOpenCheckout('shine')} 
+
+                            className="w-full bg-amber-500 text-white py-3 rounded-xl font-bold hover:bg-amber-600 transition-all shadow-md active:scale-95"
+
                         >
+
                             Assinar Shine (R$ 49,90)
+
                         </button>
+
                     </div>
+
                 )}
-                
-                {/* --- PLANO GLAMOUR (R$ 89,90) --- */}
+
+
+
+                {/* --- PLANO GLAMOUR --- */}
+
                 {currentPlan !== 'premium' && (
+
                     <div className="bg-gradient-to-br from-fuchsia-900 to-purple-900 p-5 rounded-3xl shadow-xl text-white relative overflow-hidden">
-                        {/* Efeito de brilho no fundo */}
+
                         <div className="absolute -right-10 -top-10 w-40 h-40 bg-pink-500 rounded-full blur-3xl opacity-20"></div>
-                        
+
                         <div className="flex items-center gap-2 mb-2 relative z-10">
+
                             <Star size={24} className="text-pink-400" fill="currentColor" />
+
                             <h4 className="text-xl font-black text-white">Glamour</h4>
+
                         </div>
-                        <p className="text-pink-100/80 text-xs mb-4">A experiência VIP completa.</p>
-                        
+
+                        <p className="text-pink-100/80 text-xs mb-4">Experiência VIP completa.</p>
+
                         <ul className="space-y-2 text-sm text-pink-50 mb-5 relative z-10">
-                            <li className="flex items-center gap-2"><Star size={14} className="text-pink-400"/> <b>Ilimitado</b> (Equipe e Clientes)</li>
-                            <li className="flex items-center gap-2"><Calendar size={14} className="text-pink-400"/> <b>Sincronização Google Agenda</b></li>
-                            <li className="flex items-center gap-2"><Zap size={14} className="text-pink-400"/> <b>IA Juliana (Chatbot)</b></li>
+
+                            <li className="flex items-center gap-2"><Star size={14} className="text-pink-400"/> <b>Ilimitado</b> (Equipe/Clientes)</li>
+
+                            <li className="flex items-center gap-2"><Calendar size={14} className="text-pink-400"/> <b>Google Agenda</b> + <b>IA</b></li>
+
                         </ul>
-                        
+
                         <button 
-                            onClick={() => window.open(LINK_GLAMOUR, '_blank')}
+
+                            onClick={() => handleOpenCheckout('glamour')} 
+
                             className="w-full bg-gradient-to-r from-pink-500 to-fuchsia-600 text-white py-3 rounded-xl font-bold hover:shadow-pink-500/40 hover:shadow-lg transition-all transform active:scale-95 relative z-10"
+
                         >
+
                             Ser Glamour (R$ 89,90)
+
                         </button>
+
                     </div>
+
                 )}
-                
-                {/* MENSAGEM PARA QUEM JÁ É GLAMOUR */}
-                {currentPlan === 'premium' && (
-                    <div className="text-center py-8">
-                        <div className="w-20 h-20 bg-gradient-to-br from-fuchsia-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-                            <Star size={40} className="text-fuchsia-500" fill="currentColor" />
-                        </div>
-                        <h3 className="font-bold text-gray-800 text-lg">Você é Glamour!</h3>
-                        <p className="text-gray-500 text-sm mt-1 px-6">
-                            Aproveite todos os recursos exclusivos sem limites. O La Vie agradece a preferência! 💖
-                        </p>
-                    </div>
-                )}
+
             </div>
+
+
+
+            {/* --- MODAL DE CPF/CNPJ --- */}
+
+            {showModal && (
+
+                <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 animate-fade-in">
+
+                    <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-slide-up">
+
+                        <div className="flex justify-between items-center mb-4">
+
+                            <h3 className="text-lg font-black text-gray-800">Finalizar Assinatura</h3>
+
+                            <button onClick={() => setShowModal(false)} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200">
+
+                                <X size={20} />
+
+                            </button>
+
+                        </div>
+
+                        
+
+                        <p className="text-sm text-gray-600 mb-4">
+
+                            Para emitir sua nota fiscal e cobrança segura, precisamos do seu documento.
+
+                        </p>
+
+
+
+                        <div className="space-y-4">
+
+                            <div>
+
+                                <label className="text-xs font-bold text-gray-600 uppercase mb-1 block ml-1">CPF ou CNPJ</label>
+
+                                <input
+
+                                    type="text"
+
+                                    value={cpfCnpj}
+
+                                    onChange={handleCpfChange}
+
+                                    placeholder="000.000.000-00"
+
+                                    className="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none font-bold text-lg text-gray-800"
+
+                                    maxLength={18}
+
+                                />
+
+                            </div>
+
+
+
+                            <button
+
+                                onClick={handleConfirmPayment}
+
+                                disabled={loadingPay}
+
+                                className="w-full bg-green-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-green-700 transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2"
+
+                            >
+
+                                {loadingPay ? (
+
+                                    <>
+
+                                        <Loader2 size={24} className="animate-spin" /> Processando...
+
+                                    </>
+
+                                ) : (
+
+                                    <>
+
+                                        <CheckCircle size={24} /> Confirmar e Pagar
+
+                                    </>
+
+                                )}
+
+                            </button>
+
+                            
+
+                            <p className="text-center text-[10px] text-gray-400 mt-2">
+
+                                Ambiente seguro integrado ao Asaas Pagamentos.
+
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            )}
+
         </div>
+
     );
+
 };
 
 // ============================================
