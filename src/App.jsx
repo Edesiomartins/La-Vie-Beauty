@@ -959,20 +959,18 @@ const SettingsScreen = ({
         </div>
 
         <div className="p-6 space-y-6 overflow-y-auto pb-8">
-            <div className="bg-gradient-to-r from-blue-500 to-indigo-500 p-5 rounded-3xl shadow-lg text-white">
+            <div className="bg-gradient-to-r from-pink-500 to-gray-900 p-5 rounded-3xl shadow-lg text-white">
                 <div className="flex items-start gap-4">
                     <div className="bg-white/20 p-3 rounded-2xl">
                         <CreditCard size={24} />
                     </div>
                     <div className="flex-1">
-                        <p className="font-bold text-lg mb-1">Plano Trial Ativo</p>
-                        <p className="text-blue-100 text-sm mb-3">Seu período gratuito expira em 14 dias</p>
                         <div className="flex flex-col gap-2">
                             {/* Botão Shine */}
                             <button 
                                 onClick={() => handleSubscribe('shine')}
                                 disabled={loadingPay}
-                                className="w-full bg-amber-500 hover:bg-amber-600 text-white py-3 px-4 rounded-xl text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-xl text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
                                 {loadingPay ? "Gerando..." : "Assinar Shine (R$ 49,90)"}
                             </button>
@@ -980,7 +978,7 @@ const SettingsScreen = ({
                             <button 
                                 onClick={() => handleSubscribe('glamour')}
                                 disabled={loadingPay}
-                                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white py-3 px-4 rounded-xl text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-xl text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
                                 {loadingPay ? "Gerando..." : "Ser Glamour (R$ 89,90)"}
                             </button>
