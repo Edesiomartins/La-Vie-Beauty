@@ -970,7 +970,7 @@ const SettingsScreen = ({
                             <button 
                                 onClick={() => handleSubscribe('shine')}
                                 disabled={loadingPay}
-                                className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-xl text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                className="w-full bg-gradient-to-r from-pink-500 to-fuchsia-600 text-white py-3 px-4 rounded-xl text-sm font-bold hover:shadow-pink-500/40 hover:shadow-lg transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
                                 {loadingPay ? "Gerando..." : "Assinar Shine (R$ 49,90)"}
                             </button>
@@ -978,7 +978,7 @@ const SettingsScreen = ({
                             <button 
                                 onClick={() => handleSubscribe('glamour')}
                                 disabled={loadingPay}
-                                className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-xl text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                className="w-full bg-gradient-to-r from-pink-500 to-fuchsia-600 text-white py-3 px-4 rounded-xl text-sm font-bold hover:shadow-pink-500/40 hover:shadow-lg transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
                                 {loadingPay ? "Gerando..." : "Ser Glamour (R$ 89,90)"}
                             </button>
@@ -2111,6 +2111,7 @@ const AdminScreen = ({
                     <NavButton icon={User} onClick={() => setView('client-management')} label="Clientes" />
                     <NavButton icon={Users} onClick={() => setView('collaborator-management')} label="Equipe" />
                     <NavButton icon={List} onClick={() => setView('service-management')} label="Serviços" />
+                    <NavButton icon={CreditCard} onClick={() => setView('financial')} label="Assinatura" />
                     <NavButton icon={Settings} onClick={() => setView('settings')} label="Config" />
                     
                     {/* Botão Sync Destacado */}
@@ -2193,6 +2194,160 @@ const SuccessScreen = ({ setView, setCurrentSalonId }) => (
         </div>
     </div>
 );
+
+const FinancialScreen = ({ setView, salonData, clientCount, collaboratorCount }) => {
+    // SEUS LINKS DO ASAAS
+    const LINK_SHINE = "https://www.asaas.com/c/LINK_PLANO_SHINE"; 
+    const LINK_GLAMOUR = "https://www.asaas.com/c/LINK_PLANO_GLAMOUR"; 
+    
+    // --- CONFIGURAÇÃO DOS NOMES ---
+    const planDetails = {
+        free: { name: 'Basic', color: 'bg-gray-500', icon: Lock },
+        pro: { name: 'Shine ✨', color: 'bg-amber-500', icon: Sparkles },
+        premium: { name: 'Glamour 💎', color: 'bg-fuchsia-600', icon: Star }
+    };
+    
+    const currentPlan = salonData?.plan || 'free';
+    const currentDetails = planDetails[currentPlan] || planDetails.free;
+    
+    // Limites
+    const getLimits = () => {
+        if (currentPlan === 'free') return { client: 30, collab: 2 };
+        if (currentPlan === 'pro') return { client: 90, collab: 5 };
+        return { client: 9999, collab: 9999 };
+    };
+    
+    const limits = getLimits();
+    const calcPercent = (current, max) => Math.min((current / max) * 100, 100);
+    
+    return (
+        <div className="flex flex-col h-full bg-gradient-to-b from-gray-50 to-white">
+            {/* Cabeçalho */}
+            <div className="bg-gradient-to-br from-gray-900 to-gray-800 p-6 pt-12 pb-8 rounded-b-[32px] shadow-xl">
+                <button onClick={() => setView('admin')} className="text-white/80 hover:text-white mb-4 flex items-center gap-2 text-sm">
+                    <X size={18} /> Voltar
+                </button>
+                <h2 className="text-2xl font-black text-white mb-1">Assinatura</h2>
+                <p className="text-gray-400 text-sm">Evolua seu salão com o La Vie</p>
+            </div>
+            
+            <div className="p-6 space-y-6 overflow-y-auto pb-10">
+                {/* CARD DO STATUS ATUAL */}
+                <div className="bg-white p-5 rounded-3xl shadow-md border border-gray-100">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="font-bold text-gray-800 text-sm uppercase tracking-wider">Seu Plano Atual</h3>
+                        <span className={`${currentDetails.color} text-white px-3 py-1 rounded-full text-xs font-bold uppercase shadow-sm`}>
+                            {currentDetails.name}
+                        </span>
+                    </div>
+                    
+                    {/* Barras de Consumo */}
+                    <div className="space-y-4">
+                        {/* Colaboradores */}
+                        <div>
+                            <div className="flex justify-between text-xs mb-1 text-gray-500">
+                                <span className="flex items-center gap-1"><Users size={12}/> Equipe</span>
+                                <span>{collaboratorCount} / {currentPlan === 'premium' ? '∞' : limits.collab}</span>
+                            </div>
+                            <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                                <div 
+                                    className={`h-full ${collaboratorCount >= limits.collab && currentPlan !== 'premium' ? 'bg-red-500' : 'bg-blue-500'}`} 
+                                    style={{ width: `${calcPercent(collaboratorCount, limits.collab)}%` }}
+                                ></div>
+                            </div>
+                        </div>
+                        
+                        {/* Clientes */}
+                        <div>
+                            <div className="flex justify-between text-xs mb-1 text-gray-500">
+                                <span className="flex items-center gap-1"><User size={12}/> Clientes</span>
+                                <span>{clientCount} / {currentPlan === 'premium' ? '∞' : limits.client}</span>
+                            </div>
+                            <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                                <div 
+                                    className={`h-full ${clientCount >= limits.client && currentPlan !== 'premium' ? 'bg-red-500' : 'bg-purple-500'}`} 
+                                    style={{ width: `${calcPercent(clientCount, limits.client)}%` }}
+                                ></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                {/* TÍTULO DE UPGRADE */}
+                {currentPlan !== 'premium' && (
+                    <h3 className="font-bold text-gray-800 text-lg px-1">Disponíveis para você</h3>
+                )}
+                
+                {/* --- PLANO SHINE (R$ 49,90) --- */}
+                {currentPlan === 'free' && (
+                    <div className="bg-gradient-to-br from-amber-100 to-yellow-50 p-5 rounded-3xl shadow-lg border border-amber-200 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 bg-amber-400 text-white px-3 py-1 rounded-bl-xl text-[10px] font-bold shadow-sm">
+                            MAIS POPULAR
+                        </div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <Sparkles size={24} className="text-amber-500" fill="currentColor" />
+                            <h4 className="text-xl font-black text-amber-600">Shine</h4>
+                        </div>
+                        <p className="text-amber-700/80 text-xs mb-4 font-medium">Ideal para crescer com brilho.</p>
+                        
+                        <ul className="space-y-2 text-sm text-amber-800 mb-5">
+                            <li className="flex items-center gap-2"><CheckCircle size={14} className="text-amber-500"/> Até <b>5</b> Colaboradores</li>
+                            <li className="flex items-center gap-2"><CheckCircle size={14} className="text-amber-500"/> Até <b>90</b> Clientes</li>
+                            <li className="flex items-center gap-2"><CheckCircle size={14} className="text-amber-500"/> Painel Administrativo Pro</li>
+                        </ul>
+                        
+                        <button 
+                            onClick={() => window.open(LINK_SHINE, '_blank')}
+                            className="w-full bg-gradient-to-r from-pink-500 to-fuchsia-600 text-white py-3 rounded-xl font-bold hover:shadow-pink-500/40 hover:shadow-lg transition-all transform active:scale-95"
+                        >
+                            Assinar Shine (R$ 49,90)
+                        </button>
+                    </div>
+                )}
+                
+                {/* --- PLANO GLAMOUR (R$ 89,90) --- */}
+                {currentPlan !== 'premium' && (
+                    <div className="bg-gradient-to-br from-fuchsia-900 to-purple-900 p-5 rounded-3xl shadow-xl text-white relative overflow-hidden">
+                        {/* Efeito de brilho no fundo */}
+                        <div className="absolute -right-10 -top-10 w-40 h-40 bg-pink-500 rounded-full blur-3xl opacity-20"></div>
+                        
+                        <div className="flex items-center gap-2 mb-2 relative z-10">
+                            <Star size={24} className="text-pink-400" fill="currentColor" />
+                            <h4 className="text-xl font-black text-white">Glamour</h4>
+                        </div>
+                        <p className="text-pink-100/80 text-xs mb-4">A experiência VIP completa.</p>
+                        
+                        <ul className="space-y-2 text-sm text-pink-50 mb-5 relative z-10">
+                            <li className="flex items-center gap-2"><Star size={14} className="text-pink-400"/> <b>Ilimitado</b> (Equipe e Clientes)</li>
+                            <li className="flex items-center gap-2"><Calendar size={14} className="text-pink-400"/> <b>Sincronização Google Agenda</b></li>
+                            <li className="flex items-center gap-2"><Zap size={14} className="text-pink-400"/> <b>IA Juliana (Chatbot)</b></li>
+                        </ul>
+                        
+                        <button 
+                            onClick={() => window.open(LINK_GLAMOUR, '_blank')}
+                            className="w-full bg-gradient-to-r from-pink-500 to-fuchsia-600 text-white py-3 rounded-xl font-bold hover:shadow-pink-500/40 hover:shadow-lg transition-all transform active:scale-95 relative z-10"
+                        >
+                            Ser Glamour (R$ 89,90)
+                        </button>
+                    </div>
+                )}
+                
+                {/* MENSAGEM PARA QUEM JÁ É GLAMOUR */}
+                {currentPlan === 'premium' && (
+                    <div className="text-center py-8">
+                        <div className="w-20 h-20 bg-gradient-to-br from-fuchsia-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                            <Star size={40} className="text-fuchsia-500" fill="currentColor" />
+                        </div>
+                        <h3 className="font-bold text-gray-800 text-lg">Você é Glamour!</h3>
+                        <p className="text-gray-500 text-sm mt-1 px-6">
+                            Aproveite todos os recursos exclusivos sem limites. O La Vie agradece a preferência! 💖
+                        </p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
 
 // ============================================
 // COMPONENTE PRINCIPAL (APP)
@@ -3194,7 +3349,7 @@ export default function App() {
     useEffect(() => {
         if (!currentSalonId) return;
         
-        if (view === 'collaborator-management' || view === 'admin' || showCollaboratorForm) {
+        if (view === 'collaborator-management' || view === 'admin' || view === 'financial' || showCollaboratorForm) {
             const fetchCollaborators = async () => {
                 try {
                     const querySnapshot = await getDocs(collection(db, "salons", currentSalonId, "collaborators"));
@@ -3289,7 +3444,7 @@ export default function App() {
     useEffect(() => {
         if (!currentSalonId) return;
         
-        if (view === 'client-management' || view === 'admin' || showClientForm) {
+        if (view === 'client-management' || view === 'admin' || view === 'financial' || showClientForm) {
             const fetchClients = async () => {
                 try {
                     const querySnapshot = await getDocs(collection(db, "salons", currentSalonId, "clients"));
@@ -3442,6 +3597,15 @@ export default function App() {
                             loading={loading}
                             handleSubscribe={handleSubscribe}
                             loadingPay={loadingPay}
+                        />
+                    )}
+
+                    {view === 'financial' && (
+                        <FinancialScreen
+                            setView={setView}
+                            salonData={salonData}
+                            clientCount={clients.length}
+                            collaboratorCount={collaborators.length}
                         />
                     )}
 
