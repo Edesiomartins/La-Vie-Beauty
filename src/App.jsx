@@ -944,48 +944,117 @@ const SettingsScreen = ({
     setEditProfile,
     handleSaveProfile,
     loading,
-    handleSubscribe,
-    loadingPay
-}) => (
-    <div className="flex flex-col h-full bg-gradient-to-b from-gray-50 to-gray-100">
-        <div className="bg-white p-6 shadow-md sticky top-0 z-10 flex items-center gap-4 border-b border-gray-200">
-            <button onClick={() => setView('admin')} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                <X size={22} className="text-gray-600" />
-            </button>
-            <div>
-                <h2 className="font-bold text-gray-800 text-lg">Configurações</h2>
-                <p className="text-xs text-gray-500">Personalize seu estabelecimento</p>
-            </div>
-        </div>
+    salonData
+}) => {
+    // Estados para controle do pagamento
+    const [loadingPay, setLoadingPay] = useState(false);
+    const [showModal, setShowModal] = useState(false);
+    const [selectedPlan, setSelectedPlan] = useState(null);
+    const [cpfCnpj, setCpfCnpj] = useState('');
 
-        <div className="p-6 space-y-6 overflow-y-auto pb-8">
-            <div className="bg-gradient-to-r from-pink-500 to-gray-900 p-5 rounded-3xl shadow-lg text-white">
-                <div className="flex items-start gap-4">
-                    <div className="bg-white/20 p-3 rounded-2xl">
-                        <CreditCard size={24} />
-                    </div>
-                    <div className="flex-1">
-                        <div className="flex flex-col gap-2">
-                            {/* Botão Shine */}
-                            <button 
-                                onClick={() => handleSubscribe('shine')}
-                                disabled={loadingPay}
-                                className="w-full bg-gradient-to-r from-pink-500 to-fuchsia-600 text-white py-3 px-4 rounded-xl text-sm font-bold hover:shadow-pink-500/40 hover:shadow-lg transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                            >
-                                {loadingPay ? "Gerando..." : "Assinar Shine (R$ 49,90)"}
-                            </button>
-                            {/* Botão Glamour */}
-                            <button 
-                                onClick={() => handleSubscribe('glamour')}
-                                disabled={loadingPay}
-                                className="w-full bg-gradient-to-r from-pink-500 to-fuchsia-600 text-white py-3 px-4 rounded-xl text-sm font-bold hover:shadow-pink-500/40 hover:shadow-lg transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                            >
-                                {loadingPay ? "Gerando..." : "Ser Glamour (R$ 89,90)"}
-                            </button>
+    // Formata CPF/CNPJ enquanto digita
+    const handleCpfChange = (e) => {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length <= 11) {
+            value = value.replace(/(\d{3})(\d)/, '$1.$2');
+            value = value.replace(/(\d{3})(\d)/, '$1.$2');
+            value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+        } else {
+            value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+            value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+            value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
+            value = value.replace(/(\d{4})(\d)/, '$1-$2');
+        }
+        setCpfCnpj(value);
+    };
+
+    // Abre o Modal quando clica no botão do plano
+    const handleOpenCheckout = (planType) => {
+        setSelectedPlan(planType);
+        setShowModal(true);
+    };
+
+    // Envia os dados para a API (Processo Real)
+    const handleConfirmPayment = async () => {
+        if (cpfCnpj.length < 14) {
+            alert("Por favor, digite um CPF ou CNPJ válido.");
+            return;
+        }
+
+        setLoadingPay(true);
+        try {
+            const userEmail = salonData?.email || prompt("Qual o e-mail para receber a cobrança?");
+            if (!userEmail) { setLoadingPay(false); return; }
+
+            const response = await fetch('/api/create-checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: salonData?.name || "Cliente La Vie",
+                    email: userEmail,
+                    phone: salonData?.phone,
+                    cpfCnpj: cpfCnpj.replace(/\D/g, ''),
+                    planType: selectedPlan
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.paymentUrl) {
+                setShowModal(false);
+                window.open(data.paymentUrl, '_blank');
+                alert("🎉 Fatura gerada! A página de pagamento foi aberta.\nApós pagar, o sistema libera seu acesso automaticamente.");
+            } else {
+                alert("Erro ao gerar pagamento: " + (data.error || "Verifique os dados e tente novamente."));
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Erro de conexão. Tente novamente.");
+        } finally {
+            setLoadingPay(false);
+        }
+    };
+
+    return (
+        <div className="flex flex-col h-full bg-gradient-to-b from-gray-50 to-gray-100 relative">
+            <div className="bg-white p-6 shadow-md sticky top-0 z-10 flex items-center gap-4 border-b border-gray-200">
+                <button onClick={() => setView('admin')} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                    <X size={22} className="text-gray-600" />
+                </button>
+                <div>
+                    <h2 className="font-bold text-gray-800 text-lg">Configurações</h2>
+                    <p className="text-xs text-gray-500">Personalize seu estabelecimento</p>
+                </div>
+            </div>
+
+            <div className="p-6 space-y-6 overflow-y-auto pb-8">
+                <div className="bg-gradient-to-r from-pink-500 to-gray-900 p-5 rounded-3xl shadow-lg text-white">
+                    <div className="flex items-start gap-4">
+                        <div className="bg-white/20 p-3 rounded-2xl">
+                            <CreditCard size={24} />
+                        </div>
+                        <div className="flex-1">
+                            <div className="flex flex-col gap-2">
+                                {/* Botão Shine */}
+                                <button 
+                                    onClick={() => handleOpenCheckout('shine')}
+                                    disabled={loadingPay}
+                                    className="w-full bg-gradient-to-r from-pink-500 to-fuchsia-600 text-white py-3 px-4 rounded-xl text-sm font-bold hover:shadow-pink-500/40 hover:shadow-lg transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    {loadingPay ? "Gerando..." : "Assinar Shine (R$ 49,90)"}
+                                </button>
+                                {/* Botão Glamour */}
+                                <button 
+                                    onClick={() => handleOpenCheckout('glamour')}
+                                    disabled={loadingPay}
+                                    className="w-full bg-gradient-to-r from-pink-500 to-fuchsia-600 text-white py-3 px-4 rounded-xl text-sm font-bold hover:shadow-pink-500/40 hover:shadow-lg transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    {loadingPay ? "Gerando..." : "Ser Glamour (R$ 89,90)"}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
             <div className="bg-white p-6 rounded-3xl shadow-md space-y-5">
                 <div className="flex items-center gap-2 mb-2">
@@ -1055,8 +1124,61 @@ const SettingsScreen = ({
                 Salvar Alterações
             </Button>
         </div>
+
+        {/* --- MODAL DE CPF/CNPJ --- */}
+        {showModal && (
+            <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 animate-fade-in">
+                <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-slide-up">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-black text-gray-800">Finalizar Assinatura</h3>
+                        <button onClick={() => setShowModal(false)} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200">
+                            <X size={20} />
+                        </button>
+                    </div>
+                    
+                    <p className="text-sm text-gray-600 mb-4">
+                        Para emitir sua nota fiscal e cobrança segura, precisamos do seu documento.
+                    </p>
+
+                    <div className="space-y-4">
+                        <div>
+                            <label className="text-xs font-bold text-gray-600 uppercase mb-1 block ml-1">CPF ou CNPJ</label>
+                            <input
+                                type="text"
+                                value={cpfCnpj}
+                                onChange={handleCpfChange}
+                                placeholder="000.000.000-00"
+                                className="w-full p-4 rounded-xl border-2 border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none font-bold text-lg text-gray-800"
+                                maxLength={18}
+                            />
+                        </div>
+
+                        <button
+                            onClick={handleConfirmPayment}
+                            disabled={loadingPay}
+                            className="w-full bg-green-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-green-700 transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2"
+                        >
+                            {loadingPay ? (
+                                <>
+                                    <Loader2 size={24} className="animate-spin" /> Processando...
+                                </>
+                            ) : (
+                                <>
+                                    <CheckCircle size={24} /> Confirmar e Pagar
+                                </>
+                            )}
+                        </button>
+                        
+                        <p className="text-center text-[10px] text-gray-400 mt-2">
+                            Ambiente seguro integrado ao Asaas Pagamentos.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        )}
     </div>
-);
+    );
+};
 
 const ClientHomeScreen = ({
     salonData,
@@ -3879,8 +4001,7 @@ export default function App() {
                             setEditProfile={setEditProfile}
                             handleSaveProfile={handleSaveProfile}
                             loading={loading}
-                            handleSubscribe={handleSubscribe}
-                            loadingPay={loadingPay}
+                            salonData={salonData}
                         />
                     )}
 
