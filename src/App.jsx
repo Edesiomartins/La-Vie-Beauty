@@ -2207,8 +2207,6 @@ const FinancialScreen = ({ setView, salonData, clientCount, collaboratorCount })
 
     const [cpfCnpj, setCpfCnpj] = useState('');
 
-
-
     // Configuração visual dos planos
 
     const planDetails = {
@@ -2221,13 +2219,9 @@ const FinancialScreen = ({ setView, salonData, clientCount, collaboratorCount })
 
     };
 
-
-
     const currentPlan = salonData?.plan || 'free';
 
     const currentDetails = planDetails[currentPlan] || planDetails.free;
-
-
 
     // Limites dos planos
 
@@ -2244,8 +2238,6 @@ const FinancialScreen = ({ setView, salonData, clientCount, collaboratorCount })
     const limits = getLimits();
 
     const calcPercent = (current, max) => Math.min((current / max) * 100, 100);
-
-
 
     // Formata CPF/CNPJ enquanto digita
 
@@ -2277,8 +2269,6 @@ const FinancialScreen = ({ setView, salonData, clientCount, collaboratorCount })
 
     };
 
-
-
     // 1. Abre o Modal quando clica no botão do plano
 
     const handleOpenCheckout = (planType) => {
@@ -2288,8 +2278,6 @@ const FinancialScreen = ({ setView, salonData, clientCount, collaboratorCount })
         setShowModal(true);
 
     };
-
-
 
     // 2. Envia os dados para a API (Processo Real)
 
@@ -2303,8 +2291,6 @@ const FinancialScreen = ({ setView, salonData, clientCount, collaboratorCount })
 
         }
 
-
-
         setLoadingPay(true);
 
         try {
@@ -2314,8 +2300,6 @@ const FinancialScreen = ({ setView, salonData, clientCount, collaboratorCount })
             const userEmail = salonData?.email || prompt("Qual o e-mail para receber a cobrança?");
 
             if (!userEmail) { setLoadingPay(false); return; }
-
-
 
             const response = await fetch('/api/create-checkout', {
 
@@ -2339,11 +2323,7 @@ const FinancialScreen = ({ setView, salonData, clientCount, collaboratorCount })
 
             });
 
-
-
             const data = await response.json();
-
-
 
             if (data.paymentUrl) {
 
@@ -2361,8 +2341,6 @@ const FinancialScreen = ({ setView, salonData, clientCount, collaboratorCount })
 
             }
 
-
-
         } catch (error) {
 
             console.error(error);
@@ -2376,8 +2354,6 @@ const FinancialScreen = ({ setView, salonData, clientCount, collaboratorCount })
         }
 
     };
-
-
 
     return (
 
@@ -2398,8 +2374,6 @@ const FinancialScreen = ({ setView, salonData, clientCount, collaboratorCount })
                 <p className="text-gray-400 text-sm">Evolua seu salão com o La Vie</p>
 
             </div>
-
-
 
             <div className="p-6 space-y-6 overflow-y-auto pb-10">
 
@@ -2463,15 +2437,11 @@ const FinancialScreen = ({ setView, salonData, clientCount, collaboratorCount })
 
                 </div>
 
-
-
                 {currentPlan !== 'premium' && (
 
                     <h3 className="font-bold text-gray-800 text-lg px-1">Escolha seu plano</h3>
 
                 )}
-
-
 
                 {/* --- PLANO SHINE --- */}
 
@@ -2514,8 +2484,6 @@ const FinancialScreen = ({ setView, salonData, clientCount, collaboratorCount })
                     </div>
 
                 )}
-
-
 
                 {/* --- PLANO GLAMOUR --- */}
 
@@ -2561,8 +2529,6 @@ const FinancialScreen = ({ setView, salonData, clientCount, collaboratorCount })
 
             </div>
 
-
-
             {/* --- MODAL DE CPF/CNPJ --- */}
 
             {showModal && (
@@ -2591,8 +2557,6 @@ const FinancialScreen = ({ setView, salonData, clientCount, collaboratorCount })
 
                         </p>
 
-
-
                         <div className="space-y-4">
 
                             <div>
@@ -2616,8 +2580,6 @@ const FinancialScreen = ({ setView, salonData, clientCount, collaboratorCount })
                                 />
 
                             </div>
-
-
 
                             <button
 
