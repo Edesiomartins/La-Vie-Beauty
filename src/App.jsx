@@ -3782,6 +3782,33 @@ export default function App() {
         }
     }, [currentSalonId, view, showCollaboratorForm]);
 
+    // NOVO: Ouvir mudanças no cadastro do Salão em Tempo Real (Para o plano mudar sozinho)
+    useEffect(() => {
+        if (!currentSalonId) return;
+
+        const salonRef = doc(db, "salons", currentSalonId);
+        
+        // Fica ouvindo o banco de dados...
+        const unsubscribe = onSnapshot(salonRef, (docSnap) => {
+            if (docSnap.exists()) {
+                const newData = { id: docSnap.id, ...docSnap.data() };
+                
+                // Atualiza o estado do App na hora!
+                setSalonData(prevData => ({
+                    ...prevData,
+                    ...newData
+                }));
+                
+                // Se o plano mudou, avisa o usuário (Opcional)
+                if (salonData && salonData.plan !== newData.plan) {
+                    // alert(`🎉 Seu plano foi atualizado para: ${newData.plan.toUpperCase()}!`);
+                }
+            }
+        });
+
+        return () => unsubscribe();
+    }, [currentSalonId]);
+
     const handleSaveCollaborator = async () => {
         if (!collaboratorForm.name.trim() || !collaboratorForm.phone.trim()) {
             alert("⚠️ Preencha nome e telefone");
