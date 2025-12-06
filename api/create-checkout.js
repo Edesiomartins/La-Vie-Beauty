@@ -2,15 +2,11 @@
 
 import dotenv from 'dotenv';
 
-// Tenta carregar localmente se existir, mas na Vercel usa as Vars de Ambiente
-
 dotenv.config({ path: '.env.local' });
 
 dotenv.config();
 
 export default async function handler(req, res) {
-
-  // CORS
 
   res.setHeader('Access-Control-Allow-Origin', '*');
 
@@ -24,13 +20,7 @@ export default async function handler(req, res) {
 
   const { name, email, phone, cpfCnpj, planType } = req.body;
 
-  if (!process.env.ASAAS_API_KEY) {
-
-    return res.status(500).json({ error: 'Chave Asaas não configurada na Vercel' });
-
-  }
-
-  // DEFINIÇÃO DOS VALORES (R$)
+  if (!process.env.ASAAS_API_KEY) return res.status(500).json({ error: 'Chave Asaas não configurada' });
 
   const PLANS = {
 
@@ -44,85 +34,41 @@ export default async function handler(req, res) {
 
   if (!selectedPlan) return res.status(400).json({ error: 'Plano inválido' });
 
-  // Limpa caracteres especiais do CPF para enviar só números
-
   const cleanCpfCnpj = cpfCnpj ? cpfCnpj.replace(/\D/g, '') : null;
 
-  if (!cleanCpfCnpj) {
-
-      return res.status(400).json({ error: 'CPF/CNPJ é obrigatório' });
-
-  }
+  if (!cleanCpfCnpj) return res.status(400).json({ error: 'CPF/CNPJ é obrigatório' });
 
   try {
 
     const ASAAS_URL = 'https://www.asaas.com/api/v3'; 
 
-    const headers = {
+    const headers = { 'Content-Type': 'application/json', 'access_token': process.env.ASAAS_API_KEY };
 
-      'Content-Type': 'application/json',
-
-      'access_token': process.env.ASAAS_API_KEY
-
-    };
-
-    // 1. Verificar se o cliente já existe
+    // 1. Cliente (Busca ou Cria)
 
     const searchRes = await fetch(`${ASAAS_URL}/customers?email=${encodeURIComponent(email)}`, { headers });
 
     const searchData = await searchRes.json();
 
-    
-
     let customerId;
 
     if (searchData.data && searchData.data.length > 0) {
 
-      // --- CENÁRIO A: Cliente já existe ---
-
       customerId = searchData.data[0].id;
 
-      console.log(`Cliente encontrado (${customerId}). Atualizando CPF...`);
+      // Atualiza CPF do cliente existente
 
-      // CORREÇÃO CRUCIAL: Atualiza o cadastro existente com o CPF novo
+      await fetch(`${ASAAS_URL}/customers/${customerId}`, {
 
-      const updateRes = await fetch(`${ASAAS_URL}/customers/${customerId}`, {
-
-        method: 'POST', // No Asaas, update é POST na rota do ID
+        method: 'POST',
 
         headers,
 
-        body: JSON.stringify({
-
-            cpfCnpj: cleanCpfCnpj,
-
-            mobilePhone: phone,
-
-            name: name // Atualiza nome também caso tenha mudado
-
-        })
+        body: JSON.stringify({ cpfCnpj: cleanCpfCnpj, mobilePhone: phone, name })
 
       });
 
-      
-
-      if (!updateRes.ok) {
-
-          const updateErr = await updateRes.json();
-
-          console.error("Erro ao atualizar cliente:", updateErr);
-
-          // Não paramos aqui, tentamos criar a assinatura mesmo assim, 
-
-          // mas o log acima vai ajudar se der erro de novo.
-
-      }
-
     } else {
-
-      // --- CENÁRIO B: Cliente novo ---
-
-      console.log("Cliente novo. Criando...");
 
       const createRes = await fetch(`${ASAAS_URL}/customers`, {
 
@@ -130,37 +76,17 @@ export default async function handler(req, res) {
 
         headers,
 
-        body: JSON.stringify({
-
-          name,
-
-          email,
-
-          mobilePhone: phone,
-
-          cpfCnpj: cleanCpfCnpj
-
-        })
+        body: JSON.stringify({ name, email, mobilePhone: phone, cpfCnpj: cleanCpfCnpj })
 
       });
 
       const createData = await createRes.json();
 
-      
-
-      if (createData.errors) {
-
-          throw new Error(createData.errors[0].description);
-
-      }
-
-      
+      if (createData.errors) throw new Error(createData.errors[0].description);
 
       customerId = createData.id;
 
     }
-
-    if (!customerId) throw new Error("Falha ao obter ID do cliente no Asaas");
 
     // 2. Criar a Assinatura
 
@@ -174,7 +100,7 @@ export default async function handler(req, res) {
 
         customer: customerId,
 
-        billingType: 'UNDEFINED',
+        billingType: 'UNDEFINED', // <--- ISSO LIBERA: CARTÃO, PIX E BOLETO
 
         value: selectedPlan.value,
 
@@ -190,17 +116,29 @@ export default async function handler(req, res) {
 
     const subData = await subRes.json();
 
-    if (subData.errors) {
+    if (subData.errors) throw new Error(subData.errors[0].description);
 
-      console.error("Erro Asaas Subscription:", subData.errors);
+    // 3. BUSCAR O LINK DE PAGAMENTO
 
-      throw new Error(subData.errors[0].description);
+    // A assinatura cria cobranças. Buscamos a primeira para pegar o link visual.
+
+    const paymentsRes = await fetch(`${ASAAS_URL}/subscriptions/${subData.id}/payments`, { headers });
+
+    const paymentsData = await paymentsRes.json();
+
+    let invoiceUrl = null;
+
+    if (paymentsData.data && paymentsData.data.length > 0) {
+
+        invoiceUrl = paymentsData.data[0].invoiceUrl;
 
     }
 
+    // Retorno final
+
     return res.status(200).json({ 
 
-      paymentUrl: subData.invoiceUrl, 
+      paymentUrl: invoiceUrl || "https://www.asaas.com", 
 
       subscriptionId: subData.id 
 
@@ -208,7 +146,7 @@ export default async function handler(req, res) {
 
   } catch (error) {
 
-    console.error('Erro Checkout:', error);
+    console.error('Erro Checkout:', error.message);
 
     return res.status(500).json({ error: error.message });
 
