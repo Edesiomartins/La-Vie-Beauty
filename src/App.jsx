@@ -990,6 +990,7 @@ const SettingsScreen = ({
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    salonId: salonData.id, // <--- ADICIONE ESTA LINHA (O VÍNCULO)
                     name: salonData?.name || "Cliente La Vie",
                     email: userEmail,
                     phone: salonData?.phone,
@@ -2435,6 +2436,8 @@ const FinancialScreen = ({ setView, salonData, clientCount, collaboratorCount })
                 headers: { 'Content-Type': 'application/json' },
 
                 body: JSON.stringify({
+
+                    salonId: salonData.id, // <--- ADICIONE ESTA LINHA (O VÍNCULO)
 
                     name: salonData?.name || "Cliente La Vie",
 

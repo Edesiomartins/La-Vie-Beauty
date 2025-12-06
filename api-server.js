@@ -12,6 +12,7 @@ import appointmentHandler from './api/create-appointment.js';
 import slotsHandler from './api/get-slots.js';
 import syncHandler from './api/sync-status.js';
 import checkoutHandler from './api/create-checkout.js';
+import webhookHandler from './api/webhook-asaas.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -51,6 +52,13 @@ app.post('/api/sync-status', async (req, res) => {
 app.post('/api/create-checkout', async (req, res) => {
     console.log("💰 Iniciando checkout Asaas...");
     try { await checkoutHandler(req, res); } 
+    catch (e) { res.status(500).json({error: e.message}); }
+});
+
+// --- ROTA 4: WEBHOOK ASAAS ---
+app.post('/api/webhook-asaas', async (req, res) => {
+    console.log("🔔 Webhook Asaas recebido...");
+    try { await webhookHandler(req, res); } 
     catch (e) { res.status(500).json({error: e.message}); }
 });
 
