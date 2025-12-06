@@ -1000,16 +1000,21 @@ const SettingsScreen = ({
 
             const data = await response.json();
 
+            if (!response.ok) {
+                throw new Error(data.error || `Erro ${response.status}: ${response.statusText}`);
+            }
+
             if (data.paymentUrl) {
                 setShowModal(false);
+                setCpfCnpj(''); // Limpa o campo
                 window.open(data.paymentUrl, '_blank');
                 alert("🎉 Fatura gerada! A página de pagamento foi aberta.\nApós pagar, o sistema libera seu acesso automaticamente.");
             } else {
                 alert("Erro ao gerar pagamento: " + (data.error || "Verifique os dados e tente novamente."));
             }
         } catch (error) {
-            console.error(error);
-            alert("Erro de conexão. Tente novamente.");
+            console.error('Erro no checkout:', error);
+            alert("❌ Erro ao processar pagamento: " + (error.message || "Verifique sua conexão e tente novamente.\n\nSe o problema persistir, verifique se a chave ASAAS_API_KEY está configurada no Vercel."));
         } finally {
             setLoadingPay(false);
         }
@@ -1127,7 +1132,7 @@ const SettingsScreen = ({
 
         {/* --- MODAL DE CPF/CNPJ --- */}
         {showModal && (
-            <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 animate-fade-in">
+            <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 animate-fade-in">
                 <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-slide-up">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg font-black text-gray-800">Finalizar Assinatura</h3>
@@ -2447,11 +2452,16 @@ const FinancialScreen = ({ setView, salonData, clientCount, collaboratorCount })
 
             const data = await response.json();
 
+            if (!response.ok) {
+                throw new Error(data.error || `Erro ${response.status}: ${response.statusText}`);
+            }
+
             if (data.paymentUrl) {
 
                 // Sucesso! Fecha modal e abre link
 
                 setShowModal(false);
+                setCpfCnpj(''); // Limpa o campo
 
                 window.open(data.paymentUrl, '_blank');
 
@@ -2465,9 +2475,9 @@ const FinancialScreen = ({ setView, salonData, clientCount, collaboratorCount })
 
         } catch (error) {
 
-            console.error(error);
+            console.error('Erro no checkout:', error);
 
-            alert("Erro de conexão. Tente novamente.");
+            alert("❌ Erro ao processar pagamento: " + (error.message || "Verifique sua conexão e tente novamente.\n\nSe o problema persistir, verifique se a chave ASAAS_API_KEY está configurada no Vercel."));
 
         } finally {
 
@@ -2655,7 +2665,7 @@ const FinancialScreen = ({ setView, salonData, clientCount, collaboratorCount })
 
             {showModal && (
 
-                <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 animate-fade-in">
+                <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 animate-fade-in">
 
                     <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl animate-slide-up">
 
