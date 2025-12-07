@@ -32,7 +32,8 @@ import {
     Mail,
     LogIn,
     Lock,
-    DollarSign
+    DollarSign,
+    AlertCircle
 } from 'lucide-react';
 
 // Importações do Firebase
@@ -306,6 +307,62 @@ const ClientSelectionModal = ({ clients, onClose, onSelect }) => {
                     </button>
                 </div>
             </div>
+        </div>
+    );
+};
+
+// ============================================
+// COMPONENTE DE BLOQUEIO POR PAGAMENTO
+// ============================================
+
+const PaymentLockScreen = ({ salonData, onPayNow }) => {
+    // Mapeamento para mostrar o nome bonito na tela de bloqueio
+    const planNames = {
+        free: 'Basic',
+        pro: 'Shine ✨',
+        premium: 'Glamour 💎'
+    };
+    const displayPlan = planNames[salonData?.plan] || 'Plano';
+
+    return (
+        <div className="h-full flex flex-col items-center justify-center p-8 bg-gray-50 text-center">
+            {/* Ícone de Alerta Pulsante */}
+            <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mb-6 relative">
+                <div className="absolute inset-0 bg-red-100 rounded-full animate-ping opacity-75"></div>
+                <Lock size={48} className="text-red-500 relative z-10" />
+            </div>
+            
+            <h2 className="text-2xl font-black text-gray-800 mb-2">Acesso Suspenso</h2>
+            <p className="text-gray-500 mb-8 max-w-xs mx-auto text-sm">
+                Identificamos uma pendência na assinatura do seu <br/>
+                <span className="font-bold text-gray-800 text-lg mt-1 block">{displayPlan}</span>
+            </p>
+            {/* Card de Status */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-red-100 w-full max-w-sm mb-6">
+                <div className="flex justify-between items-center mb-3 border-b border-gray-100 pb-3">
+                    <span className="text-gray-500 text-xs font-bold uppercase">Status da Conta</span>
+                    <span className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                        <AlertCircle size={10} /> Pendente
+                    </span>
+                </div>
+                <div className="flex justify-between items-center">
+                    <span className="text-gray-500 text-sm">Valor em aberto</span>
+                    <span className="font-bold text-gray-800 text-lg">
+                        {salonData?.plan === 'premium' ? 'R$ 89,90' : 'R$ 49,90'}
+                    </span>
+                </div>
+            </div>
+            {/* Botão de Ação */}
+            <button 
+                onClick={onPayNow}
+                className="w-full max-w-sm bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-green-200 hover:shadow-xl hover:-translate-y-1 transition-all flex items-center justify-center gap-2"
+            >
+                Regularizar Agora <ChevronRight size={20} />
+            </button>
+            
+            <p className="text-[10px] text-gray-400 mt-6 max-w-xs mx-auto leading-relaxed">
+                O desbloqueio ocorre automaticamente assim que o sistema bancário confirmar o pagamento (Pix é instantâneo).
+            </p>
         </div>
     );
 };
@@ -4226,7 +4283,13 @@ export default function App() {
                         />
                     )}
 
-                    {view === 'admin' && (
+                    {/* TRAVA DE PAGAMENTO */}
+                    {view === 'admin' && salonData?.status === 'overdue' ? (
+                        <PaymentLockScreen 
+                            salonData={salonData}
+                            onPayNow={() => setView('financial')} 
+                        />
+                    ) : view === 'admin' && (
                         <AdminScreen
                             salonData={salonData}
                             appointments={appointments}
