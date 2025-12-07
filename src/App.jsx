@@ -216,6 +216,101 @@ const LogoOption1 = () => (
 );
 
 // ============================================
+// COMPONENTE DE SELEÇÃO DE CLIENTE
+// ============================================
+
+// Componente para o Dono escolher quem é a cliente
+const ClientSelectionModal = ({ clients, onClose, onSelect }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [newClientName, setNewClientName] = useState('');
+    const [newClientPhone, setNewClientPhone] = useState('');
+
+    // Filtra clientes existentes
+    const filteredClients = clients.filter(c => 
+        c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        c.phone.includes(searchTerm)
+    );
+
+    const handleSelectNew = () => {
+        if (!newClientName || !newClientPhone) return alert("Preencha nome e telefone!");
+        // Cria um objeto de cliente temporário
+        onSelect({
+            id: 'temp-' + Date.now(),
+            name: newClientName,
+            phone: newClientPhone,
+            isNew: true // Marcador para saber que precisa salvar no banco depois se quiser
+        });
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl animate-fade-in-up flex flex-col max-h-[80vh]">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-black text-gray-800">Agendar para quem?</h3>
+                    <button onClick={onClose} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200">
+                        <X size={20} />
+                    </button>
+                </div>
+                {/* ABA 1: BUSCAR EXISTENTE */}
+                <div className="relative mb-4">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                    <input
+                        type="text"
+                        placeholder="Buscar por nome ou telefone..."
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 p-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 outline-none"
+                    />
+                </div>
+                <div className="flex-1 overflow-y-auto space-y-2 mb-4 pr-1">
+                    {filteredClients.length > 0 ? (
+                        filteredClients.map(client => (
+                            <div 
+                                key={client.id}
+                                onClick={() => onSelect(client)}
+                                className="p-3 rounded-xl border border-gray-100 hover:bg-purple-50 hover:border-purple-200 cursor-pointer flex justify-between items-center group transition-all"
+                            >
+                                <div>
+                                    <p className="font-bold text-gray-800">{client.name}</p>
+                                    <p className="text-xs text-gray-500">{client.phone}</p>
+                                </div>
+                                <ChevronRight size={18} className="text-gray-300 group-hover:text-purple-500" />
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-center text-gray-400 text-sm py-2">Nenhum cliente encontrado.</p>
+                    )}
+                </div>
+                {/* ABA 2: CLIENTE RÁPIDO (WALK-IN) */}
+                <div className="border-t border-gray-100 pt-4">
+                    <p className="text-xs font-bold text-gray-500 uppercase mb-2">Ou Cliente Novo / Rápido</p>
+                    <div className="flex gap-2 mb-2">
+                        <input 
+                            className="flex-1 p-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-purple-500"
+                            placeholder="Nome"
+                            value={newClientName}
+                            onChange={e => setNewClientName(e.target.value)}
+                        />
+                        <input 
+                            className="w-1/3 p-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-purple-500"
+                            placeholder="Telefone"
+                            value={newClientPhone}
+                            onChange={e => setNewClientPhone(formatPhone(e.target.value))} // Usa a função formatPhone que já existe no seu App
+                        />
+                    </div>
+                    <button 
+                        onClick={handleSelectNew}
+                        className="w-full bg-purple-600 text-white py-3 rounded-xl font-bold hover:bg-purple-700 transition-all"
+                    >
+                        Usar este Cliente
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ============================================
 // TELAS (COMPONENTS FORA DO APP)
 // ============================================
 
@@ -2196,7 +2291,8 @@ const AdminScreen = ({
     setView,
     setCurrentSalonId,
     handleSync,
-    handleCancelAppointment
+    handleCancelAppointment,
+    onOpenBooking
 }) => {
     // Estado local para loading do sync
     const [localLoading, setLocalLoading] = useState(false);
@@ -2257,6 +2353,17 @@ const AdminScreen = ({
                     <StatCard icon={Calendar} label="Agenda" value={appointments.length} color="pink" />
                     <StatCard icon={Sparkles} label="Serviços" value={services.length} color="purple" />
                 </div>
+
+                {/* BOTÃO DE AGENDAMENTO RÁPIDO (NOVO) */}
+                {onOpenBooking && (
+                    <button 
+                        onClick={() => onOpenBooking()}
+                        className="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white p-4 rounded-2xl shadow-lg shadow-pink-200 hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 mt-4 font-bold text-lg"
+                    >
+                        <Plus size={24} />
+                        Novo Agendamento
+                    </button>
+                )}
             </div>
             {/* Lista de Agendamentos */}
             <div className="p-6 flex-1 overflow-y-auto -mt-4">
@@ -2837,6 +2944,10 @@ export default function App() {
     const [clientName, setClientName] = useState('');
     const [clientData, setClientData] = useState(null);
     const [needsRegistration, setNeedsRegistration] = useState(false);
+
+    // Estados para agendamento pelo Admin
+    const [bookingTargetClient, setBookingTargetClient] = useState(null); // Quem vai receber o corte
+    const [showClientSelector, setShowClientSelector] = useState(false);  // Controla o modal
 
     useEffect(() => {
         if (view === 'client-salon-selection') {
@@ -3533,9 +3644,14 @@ export default function App() {
             return;
         }
 
-        if (!clientData) {
+        // Define quem é o cliente (Se for Admin agendando, usa o alvo. Se for Cliente, usa ele mesmo)
+        const finalClient = bookingTargetClient || clientData;
+
+        if (!finalClient) {
             alert("⚠️ Erro: dados do cliente não encontrados");
-            setView('client-login');
+            if (!bookingTargetClient) {
+                setView('client-login');
+            }
             return;
         }
 
@@ -3574,8 +3690,8 @@ export default function App() {
                 servicePrice: selectedService.price || selectedService.preco,
                 date: selectedDate,
                 time: selectedTime,
-                clientName: clientData.name,        // ← Usa nome cadastrado
-                clientPhone: clientData.phone,      // ← NOVO: Salva telefone
+                clientName: finalClient.name,        // <--- MUDOU AQUI
+                clientPhone: finalClient.phone,      // <--- MUDOU AQUI
                 collaboratorId: selectedCollaborator.id,
                 collaboratorName: selectedCollaborator.name,
                 status: 'confirmado',
@@ -3622,7 +3738,16 @@ export default function App() {
             }
             
             setLoading(false);
-            setView('success');
+            
+            // Reseta o cliente de agendamento
+            setBookingTargetClient(null);
+            
+            // Ajuste fino na navegação
+            if (user?.role === 'admin' || bookingTargetClient) {
+                setView('admin'); // Volta pro painel se for dono
+            } else {
+                setView('success'); // Tela de sucesso se for cliente
+            }
             
             // Resetar seleções
             setSelectedCollaborator(null);
@@ -3968,12 +4093,29 @@ export default function App() {
         }
     }, [editingClient]);
 
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center p-4 font-sans selection:bg-pink-200">
-            <div className="w-full max-w-[380px] h-[780px] bg-white rounded-[44px] shadow-2xl overflow-hidden relative border-[10px] border-gray-900 flex flex-col">
-                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-36 h-7 bg-gray-900 rounded-b-[28px] z-50 shadow-xl"></div>
+    // Lista de telas que devem usar o modo "Dashboard Largo" (Desktop)
+    const adminViews = ['admin', 'service-management', 'client-management', 'collaborator-management', 'settings', 'financial'];
+    const isDashboardMode = adminViews.includes(view);
 
-                <div className="flex-1 overflow-hidden relative bg-white">
+    return (
+        <div className="min-h-screen bg-gray-100 flex items-center justify-center font-sans selection:bg-pink-200 p-0 md:p-4">
+            
+            {/* CONTAINER PRINCIPAL RESPONSIVO */}
+            <div className={`
+                w-full bg-white relative shadow-2xl flex flex-col transition-all duration-500 ease-in-out
+                ${isDashboardMode 
+                    ? 'h-full md:max-w-6xl md:h-[90vh] md:rounded-3xl' // Modo Dashboard (Largo)
+                    : 'h-full md:max-w-[380px] md:h-[844px] md:rounded-[40px] md:border-[10px] md:border-gray-900' // Modo Celular
+                }
+            `}>
+                
+                {/* NOTCH (Recorte da câmera) - Só aparece no Modo Celular */}
+                {!isDashboardMode && (
+                    <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-36 h-7 bg-gray-900 rounded-b-[28px] z-50 shadow-xl hidden md:block pointer-events-none"></div>
+                )}
+
+                {/* CONTEÚDO DO APP (Área Rolável) */}
+                <div className="flex-1 overflow-hidden relative flex flex-col bg-white rounded-[inherit]">
                     {view === 'landing' && <LandingScreen setView={setView} />}
                     
                     {view === 'owner-login' && (
@@ -4045,15 +4187,6 @@ export default function App() {
                         />
                     )}
 
-                    {view === 'financial' && (
-                        <FinancialScreen
-                            setView={setView}
-                            salonData={salonData}
-                            clientCount={clients.length}
-                            collaboratorCount={collaborators.length}
-                        />
-                    )}
-
                     {view === 'client-home' && (
                         <ClientHomeScreen
                             salonData={salonData}
@@ -4102,6 +4235,7 @@ export default function App() {
                             setCurrentSalonId={setCurrentSalonId}
                             handleSync={handleSync}
                             handleCancelAppointment={handleCancelAppointment}
+                            onOpenBooking={() => setShowClientSelector(true)}
                         />
                     )}
 
@@ -4151,17 +4285,42 @@ export default function App() {
                             setEditingClient={setEditingClient}
                         />
                     )}
+
+                    {view === 'financial' && (
+                        <FinancialScreen
+                            setView={setView}
+                            salonData={salonData}
+                            clientCount={clients.length}
+                            collaboratorCount={collaborators.length}
+                        />
+                    )}
+
+                    {/* Modal de Seleção de Cliente para Agendamento pelo Admin */}
+                    {showClientSelector && (
+                        <ClientSelectionModal 
+                            clients={clients}
+                            onClose={() => setShowClientSelector(false)}
+                            onSelect={(client) => {
+                                setBookingTargetClient(client); // Define o cliente
+                                setShowClientSelector(false);   // Fecha modal
+                                // Vamos mandar direto para a home do salão simulando o cliente
+                                setView('client-home'); 
+                            }}
+                        />
+                    )}
                 </div>
             </div>
 
-            {/* FloatingChat - sempre no final, fora do container com overflow-hidden */}
+            {/* Chat flutuante: Adicionei a key para resetar ao trocar de salão e z-index para ficar acima de tudo */}
             {view === 'client-home' && currentSalonId && (clientData || clientPhone) && (
-                <FloatingChat
-                    key={currentSalonId}
-                    clientId={(clientData?.phone || clientPhone || '').replace(/\D/g, '')}
-                    salonId={currentSalonId}
-                    setView={setView}
-                />
+                <div className="fixed bottom-6 right-6 z-[9999]">
+                    <FloatingChat
+                        key={currentSalonId}
+                        clientId={(clientData?.phone || clientPhone || '').replace(/\D/g, '')}
+                        salonId={currentSalonId}
+                        setView={setView}
+                    />
+                </div>
             )}
         </div>
     );
