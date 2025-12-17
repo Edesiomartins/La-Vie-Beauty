@@ -1,3 +1,954 @@
-<?php
-echo "<h1>La Vie Beauty - Em breve</h1>";
-?>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salão de Beleza - Detalhes e Agendamento</title>
+    <meta name="description" content="Descubra os serviços de estética e beleza do nosso salão. Agende seu horário agora e transforme sua beleza!">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* CSS Variables */
+        :root {
+            --color-black: #1a1a1a;
+            --color-pink-primary: #d946a6;
+            --color-pink-secondary: #ec4899;
+            --color-pink-accent: #f472b6;
+            --color-white: #ffffff;
+            --color-gray-bg: #f5f5f5;
+            --color-gray-border: #e5e5e5;
+            --color-text-dark: #333333;
+            --color-text-light: #f0f0f0;
+
+            --font-poppins: 'Poppins', sans-serif;
+
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 1rem;
+            --spacing-md: 1.5rem;
+            --spacing-lg: 2rem;
+            --spacing-xl: 3rem;
+            --spacing-xxl: 4rem;
+
+            --border-radius-sm: 0.25rem;
+            --border-radius-md: 0.5rem;
+
+            --transition-speed: 0.3s ease-in-out;
+            --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-poppins);
+            line-height: 1.6;
+            color: var(--color-text-dark);
+            background-color: var(--color-gray-bg);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        a {
+            text-decoration: none;
+            color: var(--color-pink-primary);
+            transition: color var(--transition-speed);
+        }
+
+        a:hover {
+            color: var(--color-pink-secondary);
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* Typography */
+        h1, h2, h3, h4, h5, h6 {
+            font-family: var(--font-poppins);
+            font-weight: 700;
+            color: var(--color-black);
+            margin-bottom: var(--spacing-md);
+        }
+
+        h1 { font-size: 3rem; line-height: 1.2; }
+        h2 { font-size: 2.5rem; line-height: 1.3; }
+        h3 { font-size: 2rem; line-height: 1.4; }
+        h4 { font-size: 1.5rem; font-weight: 600; }
+        p { font-size: 1.1rem; margin-bottom: var(--spacing-sm); }
+        small { font-size: 0.9rem; font-weight: 300; color: #666; }
+
+        /* Utility Classes */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 var(--spacing-md);
+        }
+
+        .text-center { text-align: center; }
+        .mb-sm { margin-bottom: var(--spacing-sm); }
+        .mb-md { margin-bottom: var(--spacing-md); }
+        .mb-lg { margin-bottom: var(--spacing-lg); }
+        .mb-xl { margin-bottom: var(--spacing-xl); }
+
+        .section-padding {
+            padding: var(--spacing-xxl) 0;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: var(--spacing-lg);
+            position: relative;
+            padding-bottom: var(--spacing-sm);
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            bottom: 0;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 4px;
+            background-color: var(--color-pink-primary);
+            border-radius: var(--border-radius-sm);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--spacing-sm) var(--spacing-lg);
+            border-radius: var(--border-radius-md);
+            font-weight: 600;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all var(--transition-speed);
+            border: none;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .btn-primary {
+            background-color: var(--color-pink-primary);
+            color: var(--color-white);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--color-pink-secondary);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            color: var(--color-pink-primary);
+            border: 2px solid var(--color-pink-primary);
+        }
+
+        .btn-outline:hover {
+            background-color: var(--color-pink-primary);
+            color: var(--color-white);
+            transform: translateY(-2px);
+        }
+
+        /* Header Hero Section */
+        .hero {
+            position: relative;
+            height: 80vh;
+            min-height: 500px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-white);
+            text-align: center;
+            overflow: hidden;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to right, rgba(26, 26, 26, 0.6) 0%, rgba(217, 70, 166, 0.4) 100%);
+            z-index: 1;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            max-width: 800px;
+            padding: var(--spacing-lg);
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            color: var(--color-white);
+            margin-bottom: var(--spacing-md);
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: var(--spacing-xl);
+            color: var(--color-text-light);
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        /* About Section */
+        .about-section {
+            background-color: var(--color-white);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .about-content {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: var(--spacing-xl);
+        }
+
+        .about-image, .about-text {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .about-image img {
+            border-radius: var(--border-radius-md);
+            box-shadow: var(--shadow-md);
+            object-fit: cover;
+            width: 100%;
+            height: 400px;
+        }
+
+        .about-text h3 {
+            font-size: 2rem;
+            color: var(--color-pink-primary);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .about-text p {
+            color: var(--color-text-dark);
+        }
+
+        /* Services Section */
+        .services-section {
+            background-color: var(--color-gray-bg);
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-lg);
+        }
+
+        .service-card {
+            background-color: var(--color-white);
+            padding: var(--spacing-lg);
+            border-radius: var(--border-radius-md);
+            box-shadow: var(--shadow-sm);
+            text-align: center;
+            transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+            border-top: 4px solid var(--color-pink-primary);
+        }
+
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .service-card .icon {
+            color: var(--color-pink-primary);
+            margin-bottom: var(--spacing-md);
+            width: 48px;
+            height: 48px;
+            stroke-width: 2;
+        }
+
+        .service-card h4 {
+            font-size: 1.4rem;
+            margin-bottom: var(--spacing-sm);
+            color: var(--color-black);
+        }
+
+        .service-card p {
+            font-size: 1rem;
+            color: #555;
+        }
+
+        /* Testimonials Section */
+        .testimonial-section {
+            background-color: var(--color-white);
+            position: relative;
+        }
+
+        .testimonial-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--spacing-lg);
+        }
+
+        .testimonial-card {
+            background-color: var(--color-gray-bg);
+            padding: var(--spacing-lg);
+            border-radius: var(--border-radius-md);
+            box-shadow: var(--shadow-sm);
+            text-align: center;
+            position: relative;
+            border-bottom: 4px solid var(--color-pink-accent);
+        }
+
+        .testimonial-card p {
+            font-style: italic;
+            margin-bottom: var(--spacing-sm);
+            color: #444;
+        }
+
+        .testimonial-card .author {
+            font-weight: 600;
+            color: var(--color-pink-primary);
+            margin-top: var(--spacing-sm);
+        }
+
+        .testimonial-card .rating {
+            color: gold;
+            font-size: 1.2rem;
+            margin-top: var(--spacing-xs);
+        }
+
+        /* Contact Section */
+        .contact-section {
+            background-color: var(--color-gray-bg);
+            padding-bottom: var(--spacing-xxl);
+        }
+
+        .contact-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-xl);
+            justify-content: center;
+        }
+
+        .contact-info, .contact-form-wrapper {
+            flex: 1;
+            min-width: 300px;
+            max-width: 500px;
+        }
+
+        .contact-info h3 {
+            color: var(--color-pink-primary);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .contact-info p {
+            margin-bottom: var(--spacing-sm);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .contact-info p .icon {
+            color: var(--color-pink-primary);
+            width: 24px;
+            height: 24px;
+        }
+
+        .contact-form-wrapper {
+            background-color: var(--color-white);
+            padding: var(--spacing-lg);
+            border-radius: var(--border-radius-md);
+            box-shadow: var(--shadow-md);
+        }
+
+        .contact-form label {
+            display: block;
+            margin-bottom: var(--spacing-xs);
+            font-weight: 600;
+            color: var(--color-text-dark);
+        }
+
+        .contact-form input[type="text"],
+        .contact-form input[type="email"],
+        .contact-form input[type="tel"],
+        .contact-form textarea {
+            width: 100%;
+            padding: var(--spacing-sm);
+            margin-bottom: var(--spacing-md);
+            border: 1px solid var(--color-gray-border);
+            border-radius: var(--border-radius-sm);
+            font-family: var(--font-poppins);
+            font-size: 1rem;
+            transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
+        }
+
+        .contact-form input:focus,
+        .contact-form textarea:focus {
+            border-color: var(--color-pink-primary);
+            box-shadow: 0 0 0 3px rgba(217, 70, 166, 0.2);
+            outline: none;
+        }
+
+        .contact-form textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .contact-form .btn {
+            width: 100%;
+        }
+
+        /* Footer */
+        .footer {
+            background-color: var(--color-black);
+            color: var(--color-text-light);
+            padding: var(--spacing-xl) 0;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .footer .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: var(--spacing-lg);
+        }
+
+        .footer-col {
+            flex: 1;
+            min-width: 200px;
+            margin-bottom: var(--spacing-md);
+            text-align: left;
+        }
+
+        .footer-col h4 {
+            color: var(--color-pink-primary);
+            margin-bottom: var(--spacing-md);
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .footer-col ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .footer-col ul li {
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .footer-col ul li a {
+            color: var(--color-text-light);
+            transition: color var(--transition-speed);
+        }
+
+        .footer-col ul li a:hover {
+            color: var(--color-pink-accent);
+        }
+
+        .social-links {
+            display: flex;
+            gap: var(--spacing-sm);
+            margin-top: var(--spacing-md);
+        }
+
+        .social-links a {
+            color: var(--color-white);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: background-color var(--transition-speed);
+        }
+
+        .social-links a:hover {
+            background-color: var(--color-pink-primary);
+        }
+
+        .footer-bottom {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: var(--spacing-md);
+            margin-top: var(--spacing-xl);
+            text-align: center;
+            width: 100%;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            h1 { font-size: 3rem; }
+            h2 { font-size: 2rem; }
+            h3 { font-size: 1.75rem; }
+            .hero h1 { font-size: 3rem; }
+            .hero p { font-size: 1.1rem; }
+            .section-title { font-size: 2rem; }
+        }
+
+        @media (max-width: 768px) {
+            .section-padding {
+                padding: var(--spacing-xl) 0;
+            }
+            .hero {
+                height: 60vh;
+                min-height: 400px;
+            }
+            .hero h1 { font-size: 2.5rem; }
+            .hero p { font-size: 1rem; }
+
+            .about-content {
+                flex-direction: column;
+                gap: var(--spacing-lg);
+            }
+            .about-image, .about-text {
+                min-width: unset;
+                width: 100%;
+            }
+            .about-image img {
+                height: 300px;
+            }
+
+            .services-grid, .testimonial-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .contact-content {
+                flex-direction: column;
+            }
+            .contact-info, .contact-form-wrapper {
+                min-width: unset;
+                width: 100%;
+            }
+
+            .footer .container {
+                flex-direction: column;
+                align-items: center;
+            }
+            .footer-col {
+                text-align: center;
+                width: 100%;
+            }
+            .social-links {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 { font-size: 2.2rem; }
+            h2 { font-size: 1.8rem; }
+            h3 { font-size: 1.5rem; }
+            .hero h1 { font-size: 2rem; }
+            .hero p { font-size: 0.95rem; }
+            .section-title { font-size: 1.8rem; }
+            .btn {
+                padding: var(--spacing-sm) var(--spacing-md);
+                font-size: 1rem;
+            }
+            p { font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <header id="hero-section" class="hero" style="background-image: url('https://source.unsplash.com/random/1920x1080/?salon,hair,beauty,spa');">
+        <div class="hero-content">
+            <h1 id="salon-name">Carregando Salão...</h1>
+            <p id="salon-description">Descubra um mundo de beleza e bem-estar. Nossos especialistas estão prontos para realçar sua melhor versão.</p>
+            <a href="#" id="cta-button" class="btn btn-primary">Agendar Horário Agora <i data-lucide="arrow-right"></i></a>
+        </div>
+    </header>
+
+    <main>
+        <section id="about" class="about-section section-padding">
+            <div class="container">
+                <h2 class="section-title">Sobre Nós</h2>
+                <div class="about-content">
+                    <div class="about-image">
+                        <img id="about-image-src" src="https://source.unsplash.com/random/800x600/?salon-interior,beauty-studio" alt="Interior do Salão de Beleza" loading="lazy">
+                    </div>
+                    <div class="about-text">
+                        <h3 id="about-title">Nossa Paixão é a Sua Beleza</h3>
+                        <p id="salon-about-text">Bem-vindo ao nosso espaço, onde a arte da beleza encontra a ciência do cuidado. Com uma equipe de profissionais altamente qualificados e apaixonados, oferecemos uma experiência única e personalizada. Desde tratamentos capilares inovadores a serviços de estética avançados, nosso objetivo é superar suas expectativas e fazer você se sentir radiante.</p>
+                        <p>Utilizamos apenas produtos de alta qualidade e as técnicas mais modernas do mercado para garantir resultados impecáveis e duradouros. Venha nos visitar e descubra o que nos torna especiais!</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="services" class="services-section section-padding">
+            <div class="container">
+                <h2 class="section-title">Nossos Serviços</h2>
+                <div id="services-grid" class="services-grid">
+                    <!-- Services will be dynamically loaded here -->
+                    <div class="service-card">
+                        <i data-lucide="scissors" class="icon"></i>
+                        <h4>Corte e Estilo</h4>
+                        <p>Transforme seu visual com cortes modernos e penteados elegantes, adaptados ao seu estilo.</p>
+                    </div>
+                    <div class="service-card">
+                        <i data-lucide="sparkles" class="icon"></i>
+                        <h4>Tratamentos Faciais</h4>
+                        <p>Rejuvenesça sua pele com nossos tratamentos faciais personalizados, limpeza profunda e hidratação.</p>
+                    </div>
+                    <div class="service-card">
+                        <i data-lucide="nail-polish" class="icon"></i>
+                        <h4>Manicure e Pedicure</h4>
+                        <p>Cuide de suas mãos e pés com esmaltação, hidratação e técnicas de nail art exclusivas.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="testimonials" class="testimonial-section section-padding">
+            <div class="container">
+                <h2 class="section-title">O Que Nossas Clientes Dizem</h2>
+                <div id="testimonial-grid" class="testimonial-grid">
+                    <!-- Testimonials will be dynamically loaded here -->
+                    <div class="testimonial-card">
+                        <p>"Atendimento impecável e resultados maravilhosos! Saio sempre renovada e feliz com o meu cabelo."</p>
+                        <div class="rating">
+                            <i data-lucide="star" fill="gold" stroke="gold"></i>
+                            <i data-lucide="star" fill="gold" stroke="gold"></i>
+                            <i data-lucide="star" fill="gold" stroke="gold"></i>
+                            <i data-lucide="star" fill="gold" stroke="gold"></i>
+                            <i data-lucide="star" fill="gold" stroke="gold"></i>
+                        </div>
+                        <p class="author">- Maria Silva</p>
+                    </div>
+                    <div class="testimonial-card">
+                        <p>"Profissionais super atenciosas e um ambiente acolhedor. Me sinto em casa e confio plenamente nos serviços."</p>
+                        <div class="rating">
+                            <i data-lucide="star" fill="gold" stroke="gold"></i>
+                            <i data-lucide="star" fill="gold" stroke="gold"></i>
+                            <i data-lucide="star" fill="gold" stroke="gold"></i>
+                            <i data-lucide="star" fill="gold" stroke="gold"></i>
+                            <i data-lucide="star-half" fill="gold" stroke="gold"></i>
+                        </div>
+                        <p class="author">- Ana Paula</p>
+                    </div>
+                    <div class="testimonial-card">
+                        <p>"Os tratamentos faciais são incríveis! Minha pele nunca esteve tão saudável e luminosa. Recomendo a todas!"</p>
+                        <div class="rating">
+                            <i data-lucide="star" fill="gold" stroke="gold"></i>
+                            <i data-lucide="star" fill="gold" stroke="gold"></i>
+                            <i data-lucide="star" fill="gold" stroke="gold"></i>
+                            <i data-lucide="star" fill="gold" stroke="gold"></i>
+                            <i data-lucide="star" fill="gold" stroke="gold"></i>
+                        </div>
+                        <p class="author">- Fernanda Lima</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="contact" class="contact-section section-padding">
+            <div class="container">
+                <h2 class="section-title">Fale Conosco</h2>
+                <div class="contact-content">
+                    <div class="contact-info">
+                        <h3>Informações de Contato</h3>
+                        <p><i data-lucide="map-pin" class="icon"></i> <span id="salon-address">Endereço do Salão</span></p>
+                        <p><i data-lucide="phone" class="icon"></i> <span id="salon-phone">(XX) XXXX-XXXX</span></p>
+                        <p><i data-lucide="mail" class="icon"></i> <span id="salon-email">contato@salao.com</span></p>
+                        <p><i data-lucide="clock" class="icon"></i> Seg - Sex: 09h - 19h | Sáb: 09h - 14h</p>
+                        <div style="margin-top: var(--spacing-lg);">
+                            <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3153.210976906232!2d-122.4194155846817!3d37.77492947975896!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8085808e9f9c7e3f%3A0x8f7c8f7c8f7c8f7c!2sGolden%20Gate%20Bridge!5e0!3m2!1sen!2sus!4v1678901234567!5m2!1sen!2sus" width="100%" height="250" style="border:0; border-radius: var(--border-radius-md); box-shadow: var(--shadow-sm);" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                        </div>
+                    </div>
+                    <div class="contact-form-wrapper">
+                        <h3>Envie-nos uma Mensagem</h3>
+                        <form id="contact-form" class="contact-form">
+                            <label for="name">Nome:</label>
+                            <input type="text" id="name" name="name" required>
+
+                            <label for="email">Email:</label>
+                            <input type="email" id="email" name="email" required>
+
+                            <label for="phone">Telefone:</label>
+                            <input type="tel" id="phone" name="phone">
+
+                            <label for="message">Mensagem:</label>
+                            <textarea id="message" name="message" required></textarea>
+
+                            <button type="submit" class="btn btn-primary">Enviar Mensagem <i data-lucide="send"></i></button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-col">
+                <h4>Salão de Beleza</h4>
+                <p>Realçando sua beleza com paixão e profissionalismo. Agende seu momento de cuidado.</p>
+                <div class="social-links">
+                    <a href="#" aria-label="Facebook"><i data-lucide="facebook"></i></a>
+                    <a href="#" aria-label="Instagram"><i data-lucide="instagram"></i></a>
+                    <a href="#" aria-label="WhatsApp"><i data-lucide="whatsapp"></i></a>
+                </div>
+            </div>
+            <div class="footer-col">
+                <h4>Links Rápidos</h4>
+                <ul>
+                    <li><a href="#hero-section">Início</a></li>
+                    <li><a href="#about">Sobre Nós</a></li>
+                    <li><a href="#services">Serviços</a></li>
+                    <li><a href="#testimonials">Depoimentos</a></li>
+                    <li><a href="#contact">Contato</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Contato</h4>
+                <ul>
+                    <li><i data-lucide="map-pin" style="width:16px; height:16px; margin-right:5px;"></i> <span id="footer-address">Endereço do Salão</span></li>
+                    <li><i data-lucide="phone" style="width:16px; height:16px; margin-right:5px;"></i> <span id="footer-phone">(XX) XXXX-XXXX</span></li>
+                    <li><i data-lucide="mail" style="width:16px; height:16px; margin-right:5px;"></i> <span id="footer-email">contato@salao.com</span></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2023 Salão de Beleza. Todos os direitos reservados.</p>
+        </div>
+    </footer>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Firebase Configuration (PLACEHOLDERS - REPLACE WITH YOUR ACTUAL CONFIG)
+        const firebaseConfig = {
+            apiKey: "SUA_API_KEY_AQUI",
+            authDomain: "SEU_AUTH_DOMAIN_AQUI",
+            projectId: "SEU_PROJECT_ID_AQUI",
+            storageBucket: "SEU_STORAGE_BUCKET_AQUI",
+            messagingSenderId: "SEU_MESSAGING_SENDER_ID_AQUI",
+            appId: "SEU_APP_ID_AQUI"
+        };
+
+        // Initialize Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+
+        // Function to get salon ID from URL
+        function getSalonIdFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('id');
+        }
+
+        // Function to render stars based on rating
+        function renderStars(rating) {
+            let starsHtml = '';
+            for (let i = 1; i <= 5; i++) {
+                if (i <= rating) {
+                    starsHtml += `<i data-lucide="star" fill="gold" stroke="gold"></i>`;
+                } else if (i - 0.5 === rating) {
+                    starsHtml += `<i data-lucide="star-half" fill="gold" stroke="gold"></i>`;
+                } else {
+                    starsHtml += `<i data-lucide="star" stroke="gold"></i>`;
+                }
+            }
+            return starsHtml;
+        }
+
+        // Load salon data
+        async function loadSalonData() {
+            const salonId = getSalonIdFromUrl();
+            if (!salonId) {
+                console.error("ID do salão não encontrado na URL.");
+                document.getElementById('salon-name').textContent = "Salão Não Encontrado";
+                document.getElementById('salon-description').textContent = "Por favor, verifique o link.";
+                return;
+            }
+
+            try {
+                const docRef = db.collection("salons").doc(salonId);
+                const doc = await docRef.get();
+
+                if (doc.exists) {
+                    const salon = doc.data();
+
+                    // Update Hero Section
+                    document.getElementById('salon-name').textContent = salon.name || "Salão de Beleza";
+                    document.getElementById('salon-description').textContent = salon.description || "Descubra um mundo de beleza e bem-estar.";
+                    if (salon.image) {
+                        document.querySelector('.hero').style.backgroundImage = `url('${salon.image}')`;
+                    } else {
+                        // Fallback to Unsplash random image if no specific image is provided
+                        document.querySelector('.hero').style.backgroundImage = `url('https://source.unsplash.com/random/1920x1080/?salon,hair,beauty,spa,${salonId}')`;
+                    }
+                    const ctaButton = document.getElementById('cta-button');
+                    if (salon.appLink) {
+                        ctaButton.href = salon.appLink;
+                    } else {
+                        ctaButton.href = "#contact"; // Fallback to contact section
+                    }
+
+                    // Update About Section
+                    document.getElementById('salon-about-text').textContent = salon.about || "Bem-vindo ao nosso espaço, onde a arte da beleza encontra a ciência do cuidado. Com uma equipe de profissionais altamente qualificados e apaixonados, oferecemos uma experiência única e personalizada.";
+                    document.getElementById('about-image-src').src = salon.aboutImage || "https://source.unsplash.com/random/800x600/?salon-interior,beauty-studio";
+                    document.getElementById('about-image-src').alt = `Interior do ${salon.name || 'Salão de Beleza'}`;
+
+
+                    // Update Services Section
+                    const servicesGrid = document.getElementById('services-grid');
+                    servicesGrid.innerHTML = ''; // Clear default services
+                    if (salon.services && salon.services.length > 0) {
+                        salon.services.forEach(service => {
+                            const serviceCard = `
+                                <div class="service-card">
+                                    <i data-lucide="${service.icon || 'sparkles'}" class="icon"></i>
+                                    <h4>${service.name}</h4>
+                                    <p>${service.description}</p>
+                                </div>
+                            `;
+                            servicesGrid.innerHTML += serviceCard;
+                        });
+                    } else {
+                        servicesGrid.innerHTML = `
+                            <p class="text-center" style="grid-column: 1 / -1;">Nenhum serviço disponível no momento. Por favor, entre em contato para mais informações.</p>
+                        `;
+                    }
+
+                    // Update Testimonials Section
+                    const testimonialGrid = document.getElementById('testimonial-grid');
+                    testimonialGrid.innerHTML = ''; // Clear default testimonials
+                    if (salon.testimonials && salon.testimonials.length > 0) {
+                        salon.testimonials.forEach(testimonial => {
+                            const testimonialCard = `
+                                <div class="testimonial-card">
+                                    <p>"${testimonial.text}"</p>
+                                    <div class="rating">
+                                        ${renderStars(testimonial.rating || 5)}
+                                    </div>
+                                    <p class="author">- ${testimonial.author}</p>
+                                </div>
+                            `;
+                            testimonialGrid.innerHTML += testimonialCard;
+                        });
+                    } else {
+                        testimonialGrid.innerHTML = `
+                            <p class="text-center" style="grid-column: 1 / -1;">Seja o primeiro a deixar um depoimento!</p>
+                        `;
+                    }
+
+                    // Update Contact Section
+                    document.getElementById('salon-address').textContent = salon.address || "Endereço não informado";
+                    document.getElementById('salon-phone').textContent = salon.phone || "(XX) XXXX-XXXX";
+                    document.getElementById('salon-email').textContent = salon.email || "contato@salao.com";
+
+                    // Update Footer
+                    document.getElementById('footer-address').textContent = salon.address || "Endereço não informado";
+                    document.getElementById('footer-phone').textContent = salon.phone || "(XX) XXXX-XXXX";
+                    document.getElementById('footer-email').textContent = salon.email || "contato@salao.com";
+
+                    // Re-render Lucide icons after dynamic content is added
+                    lucide.createIcons();
+
+                } else {
+                    console.error("Nenhum documento encontrado para o ID:", salonId);
+                    document.getElementById('salon-name').textContent = "Salão Não Encontrado";
+                    document.getElementById('salon-description').textContent = "O salão que você procura não existe ou foi removido.";
+                }
+            } catch (error) {
+                console.error("Erro ao buscar dados do salão:", error);
+                document.getElementById('salon-name').textContent = "Erro ao Carregar";
+                document.getElementById('salon-description').textContent = "Não foi possível carregar os dados do salão. Tente novamente mais tarde.";
+            }
+        }
+
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Basic form validation for contact form
+        document.getElementById('contact-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const name = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const message = document.getElementById('message').value.trim();
+
+            if (!name || !email || !message) {
+                alert('Por favor, preencha todos os campos obrigatórios.');
+                return;
+            }
+
+            if (!/\S+@\S+\.\S+/.test(email)) {
+                alert('Por favor, insira um email válido.');
+                return;
+            }
+
+            // In a real application, you would send this data to a backend service
+            alert('Mensagem enviada com sucesso! Em breve entraremos em contato.');
+            this.reset(); // Clear the form
+        });
+
+        // Lazy loading for images (already handled by loading="lazy" attribute, but can add JS fallback)
+        document.addEventListener("DOMContentLoaded", function() {
+            var lazyloadImages = document.querySelectorAll("img.lazy");
+            var lazyloadThrottleTimeout;
+
+            function lazyload () {
+                if(lazyloadThrottleTimeout) {
+                    clearTimeout(lazyloadThrottleTimeout);
+                }
+                lazyloadThrottleTimeout = setTimeout(function() {
+                    var scrollTop = window.pageYOffset;
+                    lazyloadImages.forEach(function(img) {
+                        if(img.offsetTop < (window.innerHeight + scrollTop)) {
+                            img.src = img.dataset.src;
+                            img.classList.remove('lazy');
+                        }
+                    });
+                    if(lazyloadImages.length == 0) {
+                        document.removeEventListener("scroll", lazyload);
+                        window.removeEventListener("resize", lazyload);
+                        window.removeEventListener("orientationChange", lazyload);
+                    }
+                }, 20);
+            }
+
+            document.addEventListener("scroll", lazyload);
+            window.addEventListener("resize", lazyload);
+            window.addEventListener("orientationChange", lazyload);
+        });
+
+
+        // Initial data load
+        document.addEventListener('DOMContentLoaded', loadSalonData);
+    </script>
+</body>
+</html>

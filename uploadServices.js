@@ -134,6 +134,15 @@ const servicesData = [
     tags: ["sobrancelha", "design"]
   },
   {
+    id: "sobrancelhas_design & Buço",
+    category: "Estética Facial",
+    name: "Design de Sobrancelhas & Buço",
+    description: "Design personalizado das sobrancelhas e buço.",
+    duration_minutes: 30,
+    price: 35,
+    tags: ["sobrancelha", "design", "buço"]
+  },
+  {
     id: "sobrancelhas_henna",
     category: "Estética Facial",
     name: "Sobrancelha com Henna",
