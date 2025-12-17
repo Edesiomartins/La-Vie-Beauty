@@ -134,7 +134,7 @@ const servicesData = [
     tags: ["sobrancelha", "design"]
   },
   {
-    id: "sobrancelhas_design & buço",
+    id: "sobrancelhas_design_buco",
     category: "Estética Facial",
     name: "Design de Sobrancelhas & Buço",
     description: "Design personalizado das sobrancelhas e buço.",
@@ -152,7 +152,8 @@ const servicesData = [
     tags: ["sobrancelha", "henna"]
   },
   // --- CÍLIOS ---
-  {id: "Cílios",
+  {
+    id: "cilios_colocacao",
     category: "Cílios",
     name: "Colocação de Cílios",
     description: "Colocação de cílios.",
@@ -160,7 +161,8 @@ const servicesData = [
     price: 150,
     tags: ["cílios", "colocação"]
   },
-  {id: "Cílios",
+  {
+    id: "cilios_manutencao",
     category: "Cílios",
     name: "Manutenção de Cílios",
     description: "Manutenção de cílios.",
@@ -180,7 +182,7 @@ const servicesData = [
     tags: ["limpeza", "profunda"]
   },
   {
-    id: "estetica_limpeza_pele_profunda com dermaplannig",
+    id: "estetica_limpeza_pele_profunda_dermaplannig",
     category: "Estética Facial",
     name: "Limpeza de Pele Profunda com Dermaplannig",
     description: "Extração completa e hidratação profunda com dermaplannig.",
@@ -262,6 +264,21 @@ const servicesData = [
 async function uploadData() {
   console.log(`🚀 Iniciando upload de ${servicesData.length} serviços...`);
   
+  // Validar IDs únicos
+  const ids = servicesData.map(s => s.id);
+  const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
+  if (duplicates.length > 0) {
+    console.error(`❌ ERRO: IDs duplicados encontrados: ${[...new Set(duplicates)].join(', ')}`);
+    return;
+  }
+
+  // Validar que todos os serviços têm campos obrigatórios
+  const invalidServices = servicesData.filter(s => !s.id || !s.name || !s.category);
+  if (invalidServices.length > 0) {
+    console.error(`❌ ERRO: ${invalidServices.length} serviço(s) com dados inválidos:`, invalidServices);
+    return;
+  }
+
   const batch = writeBatch(db);
   let count = 0;
 
@@ -271,22 +288,36 @@ async function uploadData() {
     // Preparando os dados (Name, Price, Category)
     const servicePayload = {
         name: service.name,                
-        description: service.description,  
-        price: service.price,              
-        duration_minutes: service.duration_minutes, 
+        description: service.description || '',  
+        price: service.price || 0,              
+        duration_minutes: service.duration_minutes || 60, 
         category: service.category,        
-        tags: service.tags
+        tags: service.tags || []
     };
 
     batch.set(docRef, servicePayload);
     count++;
+    console.log(`  ✓ Preparado: ${service.name} (ID: ${service.id})`);
   }
 
   try {
+    console.log(`\n📤 Enviando ${count} serviços para o Firebase...`);
     await batch.commit();
-    console.log(`✅ Sucesso! ${count} serviços enviados para o Firebase.`);
+    console.log(`\n✅ SUCESSO! ${count} serviços enviados para o Firebase.`);
+    console.log(`\n📋 Resumo por categoria:`);
+    const byCategory = {};
+    servicesData.forEach(s => {
+      byCategory[s.category] = (byCategory[s.category] || 0) + 1;
+    });
+    Object.entries(byCategory).forEach(([cat, qty]) => {
+      console.log(`   - ${cat}: ${qty} serviço(s)`);
+    });
   } catch (error) {
-    console.error("❌ Erro ao salvar:", error);
+    console.error("\n❌ ERRO ao salvar no Firebase:");
+    console.error("   Mensagem:", error.message);
+    console.error("   Código:", error.code);
+    console.error("   Detalhes:", error);
+    throw error;
   }
 }
 
