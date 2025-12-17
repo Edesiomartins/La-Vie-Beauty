@@ -25,6 +25,11 @@ export default async function handler(req, res) {
     googleCalendarId 
   } = req.body;
 
+  // VALIDAÇÃO: Cliente DEVE ter nome
+  if (!clientName || clientName.trim() === '') {
+    return res.status(400).json({ error: 'Nome do cliente é obrigatório para criar evento no Google Calendar' });
+  }
+
   // Se não tiver ID da agenda, apenas confirma (salva só no App)
   if (!googleCalendarId) {
     return res.status(200).json({ message: 'Salvo apenas no App (Sem ID Google)' });
@@ -61,9 +66,11 @@ export default async function handler(req, res) {
     const endDateTime = new Date(startDateTime.getTime() + (duration || 60) * 60000);
 
     // 3. Criar o Evento no Google
+    // Garantir que o nome do cliente sempre apareça no título e descrição
+    const clientNameFormatted = (clientName || 'Cliente').trim();
     const event = {
-      summary: `💅 ${serviceName} - ${clientName}`,
-      description: `Cliente: ${clientName}\nTelefone: ${clientPhone}\nServiço: ${serviceName}`,
+      summary: `💅 ${serviceName} - ${clientNameFormatted}`,
+      description: `Cliente: ${clientNameFormatted}\nTelefone: ${clientPhone || 'Não informado'}\nServiço: ${serviceName}`,
       start: {
         dateTime: startDateTime.toISOString(),
         timeZone: 'America/Sao_Paulo',

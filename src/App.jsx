@@ -396,7 +396,19 @@ const LandingScreen = ({ setView }) => (
                     <Store size={20} />
                     Sou Proprietário
                 </Button>
-                <Button onClick={() => setView('client-login')} variant="outline">
+                <Button 
+                    onClick={() => {
+                        // Verifica se tem salonId na URL
+                        const params = new URLSearchParams(window.location.search);
+                        const salonIdFromUrl = params.get('salonId');
+                        if (salonIdFromUrl) {
+                            setView('client-login');
+                        } else {
+                            alert("⚠️ Para agendar, você precisa acessar através do link do seu salão.\n\nPeça ao seu salão o link de agendamento.");
+                        }
+                    }} 
+                    variant="outline"
+                >
                     <User size={20} />
                     Sou Cliente
                 </Button>
@@ -2422,43 +2434,80 @@ const AdminScreen = ({
                     </button>
                 )}
             </div>
-            {/* Lista de Agendamentos */}
+            {/* Lista de Agendamentos - TODOS OS AGENDAMENTOS */}
             <div className="p-6 flex-1 overflow-y-auto -mt-4">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="font-bold text-gray-800 text-lg flex items-center gap-2">
                         <Calendar size={20} className="text-pink-500" />
-                        Agenda do Dia
+                        Agenda Completa
                     </h3>
+                    <span className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                        {appointments.length} agendamento{appointments.length !== 1 ? 's' : ''}
+                    </span>
                 </div>
                 {appointments.length === 0 ? (
                     <div className="text-center py-12 opacity-60">
                         <Calendar className="mx-auto text-gray-400 mb-2" size={40}/>
                         <p className="text-gray-500 text-sm">Sem agendamentos</p>
+                        <p className="text-gray-400 text-xs mt-1">Os agendamentos aparecerão aqui</p>
                     </div>
                 ) : (
                     <div className="space-y-3 pb-20">
-                        {appointments.map(app => (
-                            <div key={app.id} className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition-all flex justify-between items-center group">
-                                <div className="flex gap-4 items-center">
-                                    <div className="w-14 h-14 bg-green-50 rounded-2xl flex flex-col items-center justify-center text-green-700 border border-green-100">
-                                        <span className="text-lg font-black">{app.time}</span>
-                                    </div>
-                                    <div>
-                                        <h4 className="font-bold text-gray-800 text-sm">{app.clientName}</h4>
-                                        <p className="text-gray-500 text-xs">{app.serviceName}</p>
-                                        <p className="text-purple-600 text-[10px] font-bold mt-0.5">{app.collaboratorName}</p>
-                                    </div>
-                                </div>
+                        {appointments
+                            .sort((a, b) => {
+                                // Ordenar por data e depois por horário
+                                const dateA = a.date || '';
+                                const dateB = b.date || '';
+                                if (dateA !== dateB) {
+                                    return dateA.localeCompare(dateB);
+                                }
+                                return (a.time || '').localeCompare(b.time || '');
+                            })
+                            .map(app => {
+                                // Formatar data para exibição
+                                const appointmentDate = app.date ? new Date(app.date + 'T00:00:00').toLocaleDateString('pt-BR', {
+                                    weekday: 'short',
+                                    day: '2-digit',
+                                    month: 'short'
+                                }) : 'Data não informada';
                                 
-                                {/* Botão de Deletar (Lixeira) */}
-                                <button 
-                                    onClick={() => handleCancelAppointment(app)}
-                                    className="p-2.5 bg-gray-50 text-gray-400 rounded-xl hover:bg-red-50 hover:text-red-500 transition-colors"
-                                >
-                                    <Trash2 size={18} />
-                                </button>
-                            </div>
-                        ))}
+                                return (
+                                    <div key={app.id} className="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 hover:shadow-md transition-all flex justify-between items-center group">
+                                        <div className="flex gap-4 items-center flex-1">
+                                            <div className="w-14 h-14 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl flex flex-col items-center justify-center text-green-700 border border-green-200 shrink-0">
+                                                <span className="text-lg font-black">{app.time || '--:--'}</span>
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-start justify-between gap-2 mb-1">
+                                                    <h4 className="font-bold text-gray-800 text-sm truncate">{app.clientName || 'Cliente não informado'}</h4>
+                                                    <span className="text-[10px] text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
+                                                        {appointmentDate}
+                                                    </span>
+                                                </div>
+                                                <p className="text-gray-600 text-xs mb-1">{app.serviceName || 'Serviço não informado'}</p>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-purple-600 text-[10px] font-bold">{app.collaboratorName || 'Colaborador não informado'}</p>
+                                                    {app.servicePrice && app.servicePrice > 0 && (
+                                                        <>
+                                                            <span className="text-gray-300">•</span>
+                                                            <p className="text-green-600 text-[10px] font-bold">R$ {app.servicePrice.toFixed(2)}</p>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Botão de Deletar (Lixeira) */}
+                                        <button 
+                                            onClick={() => handleCancelAppointment(app)}
+                                            className="p-2.5 bg-gray-50 text-gray-400 rounded-xl hover:bg-red-50 hover:text-red-500 transition-colors shrink-0 ml-2"
+                                            title="Cancelar agendamento"
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
+                                    </div>
+                                );
+                            })}
                     </div>
                 )}
             </div>
@@ -3039,23 +3088,24 @@ export default function App() {
         checkUrlForSalon();
     }, []); // O array vazio [] garante que só rode 1 vez quando o app abrir
 
-    useEffect(() => {
-        if (view === 'client-salon-selection') {
-            setLoading(true);
-            const fetchAllSalons = async () => {
-                try {
-                    const querySnapshot = await getDocs(collection(db, "salons"));
-                    const salonsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    setAllSalons(salonsData);
-                } catch (error) {
-                    console.error("Erro ao buscar salões:", error);
-                } finally {
-                    setLoading(false);
-                }
-            };
-            fetchAllSalons();
-        }
-    }, [view]);
+    // REMOVIDO: useEffect que buscava todos os salões - Clientes não podem ver outros salões
+    // useEffect(() => {
+    //     if (view === 'client-salon-selection') {
+    //         setLoading(true);
+    //         const fetchAllSalons = async () => {
+    //             try {
+    //                 const querySnapshot = await getDocs(collection(db, "salons"));
+    //                 const salonsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    //                 setAllSalons(salonsData);
+    //             } catch (error) {
+    //                 console.error("Erro ao buscar salões:", error);
+    //             } finally {
+    //                 setLoading(false);
+    //             }
+    //         };
+    //         fetchAllSalons();
+    //     }
+    // }, [view]);
 
     useEffect(() => {
         if (view === 'service-management') {
@@ -3124,6 +3174,33 @@ export default function App() {
                     email: foundSalon.email || '',
                     googleCalendarId: foundSalon.googleCalendarId || ''
                 });
+                
+                // NOVO: Verificar se o proprietário existe como colaborador, se não, criar
+                try {
+                    const ownerCollaboratorId = 'owner-' + foundSalon.id;
+                    const ownerCollabRef = doc(db, "salons", foundSalon.id, "collaborators", ownerCollaboratorId);
+                    const ownerCollabDoc = await getDoc(ownerCollabRef);
+                    
+                    if (!ownerCollabDoc.exists()) {
+                        // Criar proprietário como colaborador se não existir
+                        const ownerCollaborator = {
+                            name: foundSalon.name || 'Proprietário',
+                            phone: foundSalon.phone || '',
+                            email: foundSalon.email || '',
+                            googleCalendarId: foundSalon.googleCalendarId || '',
+                            services: [], // Todos os serviços
+                            active: true,
+                            isOwner: true, // Marca como proprietário
+                            createdAt: new Date().toISOString()
+                        };
+                        await setDoc(ownerCollabRef, ownerCollaborator);
+                        console.log("✅ Proprietário criado como colaborador no login");
+                    }
+                } catch (collabError) {
+                    console.error("Erro ao verificar/criar proprietário como colaborador:", collabError);
+                    // Não bloqueia o login se falhar
+                }
+                
                 setUser({
                     id: 'owner-' + Date.now(),
                     name: 'Proprietário',
@@ -3184,6 +3261,26 @@ export default function App() {
             };
 
             await setDoc(doc(db, "salons", salonId), newSalon);
+            
+            // NOVO: Criar o proprietário como colaborador automaticamente
+            try {
+                const ownerCollaboratorId = 'owner-' + salonId;
+                const ownerCollaborator = {
+                    name: ownerForm.name || 'Proprietário',
+                    phone: ownerForm.phone,
+                    email: ownerForm.email.trim(),
+                    googleCalendarId: '', // Pode ser preenchido depois
+                    services: [], // Todos os serviços serão adicionados quando ativados
+                    active: true,
+                    isOwner: true, // Marca como proprietário
+                    createdAt: new Date().toISOString()
+                };
+                await setDoc(doc(db, "salons", salonId, "collaborators", ownerCollaboratorId), ownerCollaborator);
+                console.log("✅ Proprietário criado como colaborador");
+            } catch (collabError) {
+                console.error("Erro ao criar proprietário como colaborador:", collabError);
+                // Não bloqueia o cadastro se falhar
+            }
             
             setCurrentSalonId(salonId);
             setSalonData(newSalon);
@@ -3350,6 +3447,28 @@ export default function App() {
                 
                 await setDoc(serviceRef, serviceData);
                 
+                // NOVO: Adicionar serviço automaticamente ao colaborador proprietário
+                try {
+                    const ownerCollaboratorId = 'owner-' + currentSalonId;
+                    const ownerCollabRef = doc(db, "salons", currentSalonId, "collaborators", ownerCollaboratorId);
+                    const ownerCollabDoc = await getDoc(ownerCollabRef);
+                    
+                    if (ownerCollabDoc.exists()) {
+                        const ownerData = ownerCollabDoc.data();
+                        const currentServices = ownerData.services || [];
+                        // Adiciona o serviço se ainda não estiver na lista
+                        if (!currentServices.includes(service.id)) {
+                            await updateDoc(ownerCollabRef, {
+                                services: [...currentServices, service.id]
+                            });
+                            console.log(`✅ Serviço "${serviceData.name}" adicionado ao proprietário`);
+                        }
+                    }
+                } catch (ownerError) {
+                    console.error("Erro ao atualizar serviços do proprietário:", ownerError);
+                    // Não bloqueia a ativação do serviço
+                }
+                
                 // Normalizar o objeto service para o estado também
                 const normalizedService = {
                     id: service.id,
@@ -3508,12 +3627,14 @@ export default function App() {
                 const querySnapshot = await getDocs(collection(db, "salons", currentSalonId, "collaborators"));
                 const allCollabs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 
-                // Filtrar apenas colaboradores ativos que fazem esse serviço
-                const available = allCollabs.filter(collab => 
-                    collab.active && 
-                    collab.services && 
-                    collab.services.includes(selectedService.id)
-                );
+                // Filtrar colaboradores: ativos E (fazem esse serviço OU é o proprietário)
+                const available = allCollabs.filter(collab => {
+                    if (!collab.active) return false;
+                    // Proprietário tem acesso a todos os serviços
+                    if (collab.isOwner) return true;
+                    // Outros colaboradores precisam ter o serviço na lista
+                    return collab.services && collab.services.includes(selectedService.id);
+                });
                 
                 setAvailableCollaborators(available);
             } catch (error) {
@@ -3542,41 +3663,11 @@ export default function App() {
         const phoneKey = clientPhone.replace(/\D/g, ''); // Remove formatação
 
         try {
-            // Se não tem salão selecionado, apenas salvar dados do cliente e ir para seleção de salões
+            // IMPORTANTE: Cliente DEVE ter um salão associado (via URL ou já selecionado)
             if (!currentSalonId) {
-                // Salvar dados do cliente temporariamente
-                if (needsRegistration && clientName.trim()) {
-                    setClientData({
-                        name: clientName,
-                        phone: phoneKey,
-                        email: ''
-                    });
-                    setUser({
-                        id: phoneKey,
-                        name: clientName,
-                        phone: phoneKey,
-                        role: 'client',
-                        avatar: 'C'
-                    });
-                } else {
-                    // Cliente existente - apenas salvar dados temporários
-                    setClientData({
-                        name: clientName || 'Cliente',
-                        phone: phoneKey,
-                        email: ''
-                    });
-                    setUser({
-                        id: phoneKey,
-                        name: clientName || 'Cliente',
-                        phone: phoneKey,
-                        role: 'client',
-                        avatar: 'C'
-                    });
-                }
-                
-                setView('client-salon-selection');
-                setNeedsRegistration(false);
+                alert("⚠️ Link inválido. Por favor, acesse através do link do seu salão.");
                 setLoading(false);
+                setView('landing');
                 return;
             }
 
@@ -3587,6 +3678,16 @@ export default function App() {
             if (clientDoc.exists()) {
                 // Cliente já existe - Fazer login
                 const data = clientDoc.data();
+                
+                // VALIDAÇÃO: Se o cliente existir mas não tiver nome, forçar cadastro
+                if (!data.name || data.name.trim() === '') {
+                    setNeedsRegistration(true);
+                    setClientPhone(formatPhone(phoneKey));
+                    setLoading(false);
+                    alert("⚠️ Por favor, complete seu cadastro com seu nome.");
+                    return;
+                }
+                
                 setClientData(data);
                 setUser({
                     id: phoneKey,
@@ -3604,11 +3705,11 @@ export default function App() {
                 setView('client-home');
                 setNeedsRegistration(false);
             } else {
-                // Cliente não existe
-                if (needsRegistration) {
-                    // Cadastrar novo cliente
+                // Cliente não existe - SEMPRE precisa cadastrar com nome
+                if (needsRegistration && clientName && clientName.trim() !== '') {
+                    // Cadastrar novo cliente COM NOME
                     const newClient = {
-                        name: clientName,
+                        name: clientName.trim(), // Garantir que o nome não está vazio
                         phone: formatPhone(phoneKey),
                         email: '',
                         createdAt: new Date().toISOString(),
@@ -3635,8 +3736,11 @@ export default function App() {
                     setNeedsRegistration(false);
                     alert("✅ Cadastro realizado com sucesso!");
                 } else {
-                    // Pedir para completar cadastro
+                    // SEMPRE pedir para completar cadastro com nome
                     setNeedsRegistration(true);
+                    if (!clientName || clientName.trim() === '') {
+                        alert("⚠️ Por favor, informe seu nome completo para continuar.");
+                    }
                 }
             }
         } catch (error) {
@@ -3742,6 +3846,14 @@ export default function App() {
             if (!bookingTargetClient) {
                 setView('client-login');
             }
+            return;
+        }
+
+        // VALIDAÇÃO: Cliente DEVE ter nome para agendar
+        if (!finalClient.name || finalClient.name.trim() === '') {
+            alert("⚠️ Por favor, complete seu cadastro com seu nome antes de agendar.");
+            setView('client-login');
+            setNeedsRegistration(true);
             return;
         }
 
@@ -4231,26 +4343,48 @@ export default function App() {
                         />
                     )}
 
-                    {view === 'client-salon-selection' && (
+                    {/* Tela de seleção de salões REMOVIDA - Clientes não podem ver outros salões */}
+                    {/* {view === 'client-salon-selection' && (
                         <ClientSalonSelectionScreen
                             allSalons={allSalons}
                             loading={loading}
                             handleSelectSalon={handleSelectSalon}
                             setView={setView}
                         />
-                    )}
+                    )} */}
 
                     {view === 'client-login' && (
-                        <ClientLoginScreen
-                            clientPhone={clientPhone}
-                            setClientPhone={setClientPhone}
-                            clientName={clientName}
-                            setClientName={setClientName}
-                            needsRegistration={needsRegistration}
-                            handleClientLogin={handleClientLogin}
-                            loading={loading}
-                            setView={setView}
-                        />
+                        <>
+                            {!currentSalonId ? (
+                                <div className="flex flex-col h-full items-center justify-center p-8 text-center bg-gradient-to-b from-gray-50 to-white">
+                                    <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mb-6">
+                                        <AlertCircle size={48} className="text-red-500" />
+                                    </div>
+                                    <h2 className="text-2xl font-black text-gray-800 mb-2">Link Inválido</h2>
+                                    <p className="text-gray-600 mb-6 max-w-sm">
+                                        Para agendar, você precisa acessar através do link exclusivo do seu salão.
+                                    </p>
+                                    <p className="text-gray-500 text-sm mb-8">
+                                        Peça ao seu salão o link de agendamento ou escaneie o QR Code fornecido.
+                                    </p>
+                                    <Button onClick={() => setView('landing')} variant="primary">
+                                        <ArrowRight size={20} />
+                                        Voltar ao Início
+                                    </Button>
+                                </div>
+                            ) : (
+                                <ClientLoginScreen
+                                    clientPhone={clientPhone}
+                                    setClientPhone={setClientPhone}
+                                    clientName={clientName}
+                                    setClientName={setClientName}
+                                    needsRegistration={needsRegistration}
+                                    handleClientLogin={handleClientLogin}
+                                    loading={loading}
+                                    setView={setView}
+                                />
+                            )}
+                        </>
                     )}
 
                     {view === 'service-management' && (
