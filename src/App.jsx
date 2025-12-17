@@ -33,7 +33,9 @@ import {
     LogIn,
     Lock,
     DollarSign,
-    AlertCircle
+    AlertCircle,
+    Copy,
+    Check
 } from 'lucide-react';
 
 // Importações do Firebase
@@ -402,9 +404,11 @@ const LandingScreen = ({ setView }) => (
                         const params = new URLSearchParams(window.location.search);
                         const salonIdFromUrl = params.get('salonId');
                         if (salonIdFromUrl) {
+                            // Se já tem salonId na URL, vai para login
                             setView('client-login');
                         } else {
-                            alert("⚠️ Para agendar, você precisa acessar através do link do seu salão.\n\nPeça ao seu salão o link de agendamento.");
+                            // Se não tem, mostra mensagem explicativa
+                            alert("⚠️ Para agendar, você precisa acessar através do link exclusivo do seu salão.\n\nExemplo: app.la-vie-beauty.com.br/?salonId=ID_DO_SALAO\n\nPeça ao seu salão o link de agendamento.");
                         }
                     }} 
                     variant="outline"
@@ -1115,6 +1119,7 @@ const SettingsScreen = ({
     const [showModal, setShowModal] = useState(false);
     const [selectedPlan, setSelectedPlan] = useState(null);
     const [cpfCnpj, setCpfCnpj] = useState('');
+    const [linkCopied, setLinkCopied] = useState(false);
 
     // Formata CPF/CNPJ enquanto digita
     const handleCpfChange = (e) => {
@@ -1265,6 +1270,66 @@ const SettingsScreen = ({
                     onChange={e => setEditProfile({...editProfile, phone: e.target.value})}
                     formatPhone={true}
                 />
+            </div>
+
+            {/* Link de Agendamento */}
+            <div className="bg-gradient-to-br from-pink-50 to-rose-50 p-6 rounded-3xl shadow-md border-2 border-pink-200">
+                <div className="flex items-center gap-2 mb-4">
+                    <LinkIcon className="text-pink-600" size={20} />
+                    <h3 className="font-bold text-gray-800">Link de Agendamento</h3>
+                </div>
+                
+                <p className="text-xs text-gray-600 mb-3">
+                    Compartilhe este link com suas clientes para que elas possam agendar:
+                </p>
+                
+                <div className="bg-white p-4 rounded-xl border-2 border-pink-200 mb-3">
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="text"
+                            readOnly
+                            value={salonData?.id ? `app.la-vie-beauty.com.br/?salonId=${salonData.id}` : 'Carregando...'}
+                            className="flex-1 bg-transparent text-sm font-mono text-gray-700 outline-none"
+                        />
+                        <button
+                            onClick={async () => {
+                                const link = `https://app.la-vie-beauty.com.br/?salonId=${salonData?.id}`;
+                                try {
+                                    await navigator.clipboard.writeText(link);
+                                    setLinkCopied(true);
+                                    setTimeout(() => setLinkCopied(false), 3000);
+                                    alert("✅ Link copiado! Agora você pode compartilhar com suas clientes.");
+                                } catch (err) {
+                                    // Fallback para navegadores antigos
+                                    const input = document.createElement('input');
+                                    input.value = link;
+                                    document.body.appendChild(input);
+                                    input.select();
+                                    document.execCommand('copy');
+                                    document.body.removeChild(input);
+                                    setLinkCopied(true);
+                                    setTimeout(() => setLinkCopied(false), 3000);
+                                    alert("✅ Link copiado! Agora você pode compartilhar com suas clientes.");
+                                }
+                            }}
+                            className="p-2 bg-pink-100 hover:bg-pink-200 rounded-lg transition-colors"
+                            title="Copiar link"
+                        >
+                            {linkCopied ? (
+                                <Check size={18} className="text-green-600" />
+                            ) : (
+                                <Copy size={18} className="text-pink-600" />
+                            )}
+                        </button>
+                    </div>
+                </div>
+                
+                <div className="bg-blue-50 p-3 rounded-xl flex gap-2">
+                    <Sparkles className="text-blue-500 mt-0.5 shrink-0" size={16} />
+                    <p className="text-[10px] text-blue-700 leading-relaxed">
+                        <strong>Como usar:</strong> Envie este link por WhatsApp, e-mail ou imprima um QR Code. Quando a cliente acessar, ela será direcionada automaticamente para o agendamento do seu salão.
+                    </p>
+                </div>
             </div>
 
             <div className="bg-white p-6 rounded-3xl shadow-md space-y-5">
@@ -3070,12 +3135,13 @@ export default function App() {
                     
                     if (salonSnap.exists()) {
                         const salonData = { id: salonSnap.id, ...salonSnap.data() };
-                        // Define o salão e joga o usuário para a tela de agendamento (Client Home)
+                        // Define o salão e joga o usuário para a tela de login/cadastro
                         setCurrentSalonId(salonData.id);
                         setSalonData(salonData);
-                        setView('client-home'); 
+                        setView('client-login'); // Vai para login/cadastro primeiro
                     } else {
                         alert("Salão não encontrado ou link inválido.");
+                        setView('landing');
                     }
                 } catch (error) {
                     console.error("Erro ao carregar salão via URL:", error);
@@ -3697,9 +3763,10 @@ export default function App() {
                     avatar: 'C'
                 });
 
-                // Atualizar última visita
+                // Atualizar última visita e garantir que salonId está salvo
                 await updateDoc(clientRef, {
-                    lastVisit: new Date().toISOString()
+                    lastVisit: new Date().toISOString(),
+                    salonId: currentSalonId // Garantir que o salonId está sempre atualizado
                 });
 
                 setView('client-home');
@@ -3707,23 +3774,25 @@ export default function App() {
             } else {
                 // Cliente não existe - SEMPRE precisa cadastrar com nome
                 if (needsRegistration && clientName && clientName.trim() !== '') {
-                    // Cadastrar novo cliente COM NOME
+                    // Cadastrar novo cliente COM NOME E SALON_ID
                     const newClient = {
                         name: clientName.trim(), // Garantir que o nome não está vazio
                         phone: formatPhone(phoneKey),
                         email: '',
+                        salonId: currentSalonId, // IMPORTANTE: Salvar o ID do salão no cadastro do cliente
                         createdAt: new Date().toISOString(),
                         lastVisit: new Date().toISOString()
                     };
 
                     await setDoc(clientRef, {
                         ...newClient,
-                        phone: phoneKey // Salvar sem formatação no Firestore
+                        phone: phoneKey // Salvar sem formatação no Firestore (salonId já está no newClient)
                     });
                     
                     setClientData({
                         ...newClient,
-                        phone: phoneKey
+                        phone: phoneKey,
+                        salonId: currentSalonId // Garantir que salonId está no estado também
                     });
                     setUser({
                         id: phoneKey,
