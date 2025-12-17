@@ -134,12 +134,12 @@ const servicesData = [
     tags: ["sobrancelha", "design"]
   },
   {
-    id: "sobrancelhas_design & Buço",
+    id: "sobrancelhas_design & buço",
     category: "Estética Facial",
     name: "Design de Sobrancelhas & Buço",
     description: "Design personalizado das sobrancelhas e buço.",
     duration_minutes: 30,
-    price: 35,
+    price: 60,
     tags: ["sobrancelha", "design", "buço"]
   },
   {
@@ -151,6 +151,23 @@ const servicesData = [
     price: 45,
     tags: ["sobrancelha", "henna"]
   },
+  // --- CÍLIOS ---
+  {id: "Cílios",
+    category: "Cílios",
+    name: "Colocação de Cílios",
+    description: "Colocação de cílios.",
+    duration_minutes: 120,
+    price: 150,
+    tags: ["cílios", "colocação"]
+  },
+  {id: "Cílios",
+    category: "Cílios",
+    name: "Manutenção de Cílios",
+    description: "Manutenção de cílios.",
+    duration_minutes: 120,
+    price: 150,
+    tags: ["cílios", "manutenção"]
+  },
 
   // --- ESTÉTICA FACIAL ---
   {
@@ -161,6 +178,15 @@ const servicesData = [
     duration_minutes: 90,
     price: 160,
     tags: ["limpeza", "profunda"]
+  },
+  {
+    id: "estetica_limpeza_pele_profunda com dermaplannig",
+    category: "Estética Facial",
+    name: "Limpeza de Pele Profunda com Dermaplannig",
+    description: "Extração completa e hidratação profunda com dermaplannig.",
+    duration_minutes: 120,
+    price: 150,
+    tags: ["limpeza", "profunda", "dermaplannig"]
   },
   {
     id: "estetica_jato_de_plasma",
