@@ -45,7 +45,12 @@ import { collection, getDocs, addDoc, query, where, onSnapshot, doc, setDoc, get
 // Importação do Chat
 import FloatingChat from './Chat';
 
-const TIME_SLOTS = ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
+// Horários de 30 em 30 minutos (09:00 até 18:00)
+const TIME_SLOTS = [];
+for (let hour = 9; hour < 18; hour++) {
+    TIME_SLOTS.push(`${hour.toString().padStart(2, '0')}:00`);
+    TIME_SLOTS.push(`${hour.toString().padStart(2, '0')}:30`);
+}
 
 // Função para formatar telefone
 const formatPhone = (value) => {
@@ -760,7 +765,7 @@ const ClientLoginScreen = ({
                 {needsRegistration ? 'Complete seu Cadastro' : 'Identifique-se'}
             </h2>
             <p className="text-pink-100 text-sm">
-                {needsRegistration ? 'Precisamos de mais algumas informações' : 'Digite seu telefone para continuar'}
+                {needsRegistration ? 'Precisamos de mais algumas informações' : 'Digite seu telefone e nome para continuar'}
             </p>
         </div>
         <div className="p-6 flex-1 flex flex-col justify-center">
@@ -772,7 +777,7 @@ const ClientLoginScreen = ({
                     <p className="text-gray-600 text-sm">
                         {needsRegistration 
                             ? 'Complete seus dados para finalizar o agendamento' 
-                            : 'Seus agendamentos ficam salvos no seu telefone'}
+                            : 'Seus dados são necessários para aparecer na agenda'}
                     </p>
                 </div>
                 <form onSubmit={handleClientLogin} className="space-y-4">
@@ -784,21 +789,19 @@ const ClientLoginScreen = ({
                         placeholder="(   ) 99999-9999"
                         formatPhone={true}
                     />
-                    {needsRegistration && (
-                        <div className="animate-fade-in">
-                            <InputField
-                                label="Seu Nome Completo"
-                                icon={User}
-                                value={clientName}
-                                onChange={e => setClientName(e.target.value)}
-                                placeholder="Ex: João Silva"
-                            />
-                        </div>
-                    )}
+                    <div className="animate-fade-in">
+                        <InputField
+                            label="Seu Nome Completo"
+                            icon={User}
+                            value={clientName}
+                            onChange={e => setClientName(e.target.value)}
+                            placeholder="Ex: João Silva"
+                        />
+                    </div>
                     <Button 
                         onClick={handleClientLogin}
                         loading={loading}
-                        disabled={!clientPhone.trim() || (needsRegistration && !clientName.trim())}
+                        disabled={!clientPhone.trim() || !clientName.trim()}
                     >
                         <ArrowRight size={20} />
                         {needsRegistration ? 'Cadastrar e Continuar' : 'Continuar'}
@@ -1720,27 +1723,29 @@ const BookingScreen = ({
                                 <Clock size={14} className="text-pink-500" />
                                 Escolha o Horário
                             </label>
-                            <div className="grid grid-cols-4 gap-3">
-                                {TIME_SLOTS.map(time => {
-                                    const booked = isTimeBooked(time);
-                                    return (
-                                        <button
-                                            key={time}
-                                            onClick={() => !booked && setSelectedTime(time)}
-                                            disabled={booked}
-                                            className={`py-3 rounded-2xl text-sm font-bold transition-all duration-200 ${
-                                                booked
-                                                    ? 'bg-gray-100 border-2 border-gray-200 text-gray-400 cursor-not-allowed line-through'
-                                                    : selectedTime === time
-                                                    ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg scale-105'
-                                                    : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-pink-300 hover:shadow-md'
-                                            }`}
-                                        >
-                                            {time}
-                                            {booked && <span className="block text-[10px] mt-1">Ocupado</span>}
-                                        </button>
-                                    );
-                                })}
+                            <div className="max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                <div className="grid grid-cols-3 gap-3">
+                                    {TIME_SLOTS.map(time => {
+                                        const booked = isTimeBooked(time);
+                                        return (
+                                            <button
+                                                key={time}
+                                                onClick={() => !booked && setSelectedTime(time)}
+                                                disabled={booked}
+                                                className={`py-3 rounded-2xl text-sm font-bold transition-all duration-200 ${
+                                                    booked
+                                                        ? 'bg-gray-100 border-2 border-gray-200 text-gray-400 cursor-not-allowed line-through'
+                                                        : selectedTime === time
+                                                        ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg scale-105'
+                                                        : 'bg-white border-2 border-gray-200 text-gray-700 hover:border-pink-300 hover:shadow-md'
+                                                }`}
+                                            >
+                                                {time}
+                                                {booked && <span className="block text-[10px] mt-1">Ocupado</span>}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
 
@@ -3719,9 +3724,9 @@ export default function App() {
             return;
         }
 
-        // Se precisa de cadastro, validar nome também
-        if (needsRegistration && !clientName.trim()) {
-            alert("⚠️ Digite seu nome");
+        // Nome é sempre obrigatório
+        if (!clientName.trim()) {
+            alert("⚠️ Digite seu nome completo");
             return;
         }
 
@@ -3742,38 +3747,50 @@ export default function App() {
             const clientDoc = await getDoc(clientRef);
 
             if (clientDoc.exists()) {
-                // Cliente já existe - Fazer login
+                // Cliente já existe - Atualizar nome se necessário
                 const data = clientDoc.data();
                 
-                // VALIDAÇÃO: Se o cliente existir mas não tiver nome, forçar cadastro
-                if (!data.name || data.name.trim() === '') {
+                // Se o cliente não tem nome ou o nome foi atualizado, salvar
+                const finalName = clientName.trim() || data.name || '';
+                
+                if (!finalName) {
                     setNeedsRegistration(true);
                     setClientPhone(formatPhone(phoneKey));
                     setLoading(false);
-                    alert("⚠️ Por favor, complete seu cadastro com seu nome.");
+                    alert("⚠️ Por favor, informe seu nome completo.");
                     return;
                 }
                 
-                setClientData(data);
+                // Atualizar nome no banco se foi informado um novo nome
+                const updateData = {
+                    lastVisit: new Date().toISOString(),
+                    salonId: currentSalonId
+                };
+                
+                if (clientName.trim() && clientName.trim() !== data.name) {
+                    updateData.name = clientName.trim();
+                }
+                
+                await updateDoc(clientRef, updateData);
+                
+                setClientData({
+                    ...data,
+                    name: finalName,
+                    salonId: currentSalonId
+                });
                 setUser({
                     id: phoneKey,
-                    name: data.name,
-                    phone: data.phone,
+                    name: finalName,
+                    phone: data.phone || phoneKey,
                     role: 'client',
                     avatar: 'C'
-                });
-
-                // Atualizar última visita e garantir que salonId está salvo
-                await updateDoc(clientRef, {
-                    lastVisit: new Date().toISOString(),
-                    salonId: currentSalonId // Garantir que o salonId está sempre atualizado
                 });
 
                 setView('client-home');
                 setNeedsRegistration(false);
             } else {
                 // Cliente não existe - SEMPRE precisa cadastrar com nome
-                if (needsRegistration && clientName && clientName.trim() !== '') {
+                if (clientName && clientName.trim() !== '') {
                     // Cadastrar novo cliente COM NOME E SALON_ID
                     const newClient = {
                         name: clientName.trim(), // Garantir que o nome não está vazio
@@ -3807,9 +3824,9 @@ export default function App() {
                 } else {
                     // SEMPRE pedir para completar cadastro com nome
                     setNeedsRegistration(true);
-                    if (!clientName || clientName.trim() === '') {
-                        alert("⚠️ Por favor, informe seu nome completo para continuar.");
-                    }
+                    setLoading(false);
+                    alert("⚠️ Por favor, informe seu nome completo para continuar.");
+                    return;
                 }
             }
         } catch (error) {

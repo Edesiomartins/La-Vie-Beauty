@@ -28,4 +28,8 @@ export default {
     },
   },
   plugins: [],
+  // Estilos customizados para scrollbar
+  corePlugins: {
+    scrollbar: false, // Desabilita scrollbar padrão se houver plugin
+  },
 }
