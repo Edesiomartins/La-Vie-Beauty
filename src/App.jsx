@@ -3006,6 +3006,39 @@ export default function App() {
     const [bookingTargetClient, setBookingTargetClient] = useState(null); // Quem vai receber o corte
     const [showClientSelector, setShowClientSelector] = useState(false);  // Controla o modal
 
+    // Função para detectar se veio redirecionado da Vitrine
+    useEffect(() => {
+        const checkUrlForSalon = async () => {
+            const params = new URLSearchParams(window.location.search);
+            const salonIdFromUrl = params.get('salonId');
+
+            if (salonIdFromUrl) {
+                setLoading(true);
+                try {
+                    // Busca o salão específico pelo ID da URL
+                    const salonRef = doc(db, "salons", salonIdFromUrl);
+                    const salonSnap = await getDoc(salonRef);
+                    
+                    if (salonSnap.exists()) {
+                        const salonData = { id: salonSnap.id, ...salonSnap.data() };
+                        // Define o salão e joga o usuário para a tela de agendamento (Client Home)
+                        setCurrentSalonId(salonData.id);
+                        setSalonData(salonData);
+                        setView('client-home'); 
+                    } else {
+                        alert("Salão não encontrado ou link inválido.");
+                    }
+                } catch (error) {
+                    console.error("Erro ao carregar salão via URL:", error);
+                } finally {
+                    setLoading(false);
+                }
+            }
+        };
+
+        checkUrlForSalon();
+    }, []); // O array vazio [] garante que só rode 1 vez quando o app abrir
+
     useEffect(() => {
         if (view === 'client-salon-selection') {
             setLoading(true);
