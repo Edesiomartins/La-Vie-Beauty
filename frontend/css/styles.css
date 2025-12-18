@@ -1,200 +1,67 @@
 /* css/styles.css */
-/* Tema La Vie Beauty - Modern & Luxury
-   Fonte: Montserrat (UI), Playfair Display (Headings), Lora (Textos longos)
-*/
 
-:root {
-    --rose-600: #e11d48;
-    --rose-500: #f43f5e;
-    --gold-500: #b08a2e;
-    --gold-400: #d4af37;
-    --slate-900: #0f172a;
-    --slate-600: #475569;
-    --bg-soft: #fdfafa;
-  }
-  
-  body {
-    font-family: "Montserrat", sans-serif;
-    background-color: var(--bg-soft);
-    color: var(--slate-900);
-    overflow-x: hidden;
-  }
-  
-  /* --- Tipografia --- */
-  h1, h2, h3, h4, .font-serif {
-    font-family: "Playfair Display", serif;
-  }
-  
-  .text-gold { color: var(--gold-500); }
-  .text-rose { color: var(--rose-600); }
-  
-  /* --- Componentes Visuais --- */
-  
-  /* Glassmorphism (Efeito Vidro) */
-  .glass {
-    background: rgba(255, 255, 255, 0.75);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.6);
-  }
-  
-  .glass-dark {
-    background: rgba(15, 23, 42, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    color: white;
-  }
-  
-  /* Botões Modernos */
-  .btn-primary {
-    background: linear-gradient(135deg, var(--rose-600), var(--rose-500));
-    color: white;
-    padding: 12px 24px;
-    border-radius: 50px; /* Pill shape */
-    font-weight: 600;
-    box-shadow: 0 4px 15px rgba(225, 29, 72, 0.3);
-    transition: all 0.3s ease;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-  }
-  .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(225, 29, 72, 0.4);
-  }
-  
-  .btn-gold {
-    background: linear-gradient(135deg, var(--gold-500), var(--gold-400));
-    color: white;
-    padding: 12px 24px;
-    border-radius: 50px;
-    font-weight: 600;
-    box-shadow: 0 4px 15px rgba(176, 138, 46, 0.3);
-    transition: all 0.3s ease;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .btn-gold:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(176, 138, 46, 0.4);
-  }
-  
-  .btn-outline {
-    background: transparent;
-    border: 2px solid var(--slate-900);
-    color: var(--slate-900);
-    padding: 10px 24px;
-    border-radius: 50px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-  }
-  .btn-outline:hover {
-    background: var(--slate-900);
-    color: white;
-  }
-  
-  /* Inputs Estilizados */
-  .input-modern {
-    width: 100%;
-    padding: 14px 20px;
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
-    background: #f8fafc;
-    font-size: 15px;
-    transition: all 0.2s;
-    outline: none;
-  }
-  .input-modern:focus {
-    background: white;
-    border-color: var(--rose-600);
-    box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.1);
-  }
-  
-  /* Card do Salão (Estilo WordPress Grid) */
-  .salon-card {
-    background: white;
-    border-radius: 20px;
+/* Animação suave de entrada */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in-up {
+    animation: fadeInUp 0.8s ease-out forwards;
+    opacity: 0; /* Começa invisível */
+}
+
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-500 { animation-delay: 0.5s; }
+
+/* Zoom lento na imagem de fundo */
+@keyframes slowZoom {
+    0% { transform: scale(1); }
+    100% { transform: scale(1.1); }
+}
+.animate-slow-zoom {
+    animation: slowZoom 20s infinite alternate linear;
+}
+
+/* Card do Salão */
+.salon-card {
+    background: #fff;
+    border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.05);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: all 0.4s ease;
+    border: 1px solid #f1f5f9;
     position: relative;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .salon-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 20px 50px rgba(0,0,0,0.1);
-  }
-  
-  .card-image-wrap {
-    height: 220px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.salon-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    border-color: #ffe4e6; /* Rose border on hover */
+}
+
+.salon-card .img-container {
+    height: 240px;
     width: 100%;
-    position: relative;
     overflow: hidden;
-  }
-  
-  .card-image {
+    position: relative;
+}
+
+.salon-card img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.5s ease;
-  }
-  
-  .salon-card:hover .card-image {
-    transform: scale(1.05);
-  }
-  
-  .card-badge {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    background: rgba(255, 255, 255, 0.95);
-    padding: 6px 12px;
-    border-radius: 30px;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--gold-500);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-  }
-  
-  .card-body {
-    padding: 24px;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .card-title {
-    font-size: 18px;
-    font-weight: 700;
-    margin-bottom: 8px;
-    color: var(--slate-900);
-  }
-  
-  .card-info {
-    font-size: 14px;
-    color: var(--slate-600);
-    margin-bottom: 4px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  
-  /* Header & Nav */
-  .brand-logo {
-    font-family: "Playfair Display", serif;
-    font-size: 24px;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-    background: -webkit-linear-gradient(45deg, var(--rose-600), var(--gold-500));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  
-  /* Utilitários */
-  .hidden { display: none !important; }
+    transition: transform 0.6s ease;
+}
+
+.salon-card:hover img {
+    transform: scale(1.1);
+}

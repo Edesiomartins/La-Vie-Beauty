@@ -1,122 +1,125 @@
 /**
  * js/home.js
- * Renderiza os cards com layout moderno.
  */
 import { getGlamourPartners } from "./firestoreService.js";
 
-const elLoading = document.getElementById("loading");
-const elError = document.getElementById("error");
-const elEmpty = document.getElementById("empty");
-const elGrid = document.getElementById("grid");
-const elCountBadge = document.getElementById("countBadge");
-
-const inputs = {
-  name: document.getElementById("searchName"),
-  city: document.getElementById("searchCity")
-};
-const btns = {
-  search: document.getElementById("btnSearch"),
-  clear: document.getElementById("btnClear")
+const els = {
+    grid: document.getElementById("grid"),
+    loading: document.getElementById("loading"),
+    error: document.getElementById("error"),
+    empty: document.getElementById("empty"),
+    badge: document.getElementById("countBadge"),
+    btnSearch: document.getElementById("btnSearch"),
+    btnClear: document.getElementById("btnClear"),
+    inputName: document.getElementById("searchName"),
+    inputCity: document.getElementById("searchCity")
 };
 
-let allItems = [];
+let allPartners = [];
 
-// Helper para pegar imagem (real ou placeholder bonito)
-function getCoverImage(item, index) {
-  if (item.fotoCapa) return item.fotoCapa;
-  
-  // Keywords para variar as imagens placeholder
-  const keywords = ["salon", "makeup", "hairstyle", "nails", "spa", "barber"];
-  const key = keywords[index % keywords.length];
-  // Unsplash Source aleatório mas consistente por reload
-  return `https://source.unsplash.com/600x400/?${key},beauty&sig=${index}`;
+// Função para pegar imagem (Foto do Firestore OU Placeholder bonito)
+function getCardImage(partner, index) {
+    if (partner.fotoCapa && partner.fotoCapa.length > 5) {
+        return partner.fotoCapa;
+    }
+    // Palavras-chave para variar as imagens placeholder
+    const types = ["salon", "makeup", "haircut", "nails", "spa", "beauty"];
+    const keyword = types[index % types.length];
+    // Usa Unsplash com assinatura para garantir imagens diferentes
+    return `https://source.unsplash.com/600x400/?${keyword}&sig=${index}`;
 }
 
-function cardTemplate(item, index) {
-  const nome = item.nome || "Parceiro La Vie";
-  const cidade = item.cidade || "Localização não informada";
-  const categoria = item.categoria || "Beleza";
-  
-  const imgUrl = getCoverImage(item, index);
-  const link = `/pages/salao.php?id=${item.id}`;
+function renderCard(item, index) {
+    const imgUrl = getCardImage(item, index);
+    const nome = item.nome || "Salão Parceiro";
+    const cidade = item.cidade || "Localização não informada";
+    const categoria = item.categoria || "Beleza e Estética";
+    const id = item.id;
 
-  return `
+    return `
     <article class="salon-card group">
-      <div class="card-image-wrap">
-        <img src="${imgUrl}" alt="${nome}" class="card-image" loading="lazy" />
-        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60"></div>
-        <span class="card-badge">✨ Glamour</span>
-      </div>
-      
-      <div class="card-body">
-        <div class="flex justify-between items-start">
-          <div>
-            <span class="text-xs font-bold text-rose-500 uppercase tracking-wide mb-1 block">${categoria}</span>
-            <h3 class="card-title group-hover:text-rose-600 transition-colors">${nome}</h3>
-          </div>
+        <div class="img-container">
+            <img src="${imgUrl}" alt="${nome}" loading="lazy" />
+            <div class="absolute top-3 right-3 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-rose-600 shadow-sm uppercase tracking-wider">
+                ✨ Glamour
+            </div>
         </div>
         
-        <div class="mt-auto pt-4 space-y-2">
-          <p class="card-info">
-            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-            ${cidade}
-          </p>
-          
-          <a href="${link}" class="mt-4 w-full btn-outline text-center justify-center group-hover:bg-rose-600 group-hover:border-rose-600 group-hover:text-white">
-            Ver Perfil
-          </a>
+        <div class="p-6">
+            <div class="mb-3">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wide">${categoria}</span>
+                <h3 class="text-xl font-serif font-bold text-slate-900 group-hover:text-rose-600 transition-colors truncate">${nome}</h3>
+            </div>
+            
+            <div class="flex items-center text-slate-500 text-sm mb-6">
+                <i class="ph-fill ph-map-pin text-rose-400 mr-2"></i>
+                <span class="truncate">${cidade}</span>
+            </div>
+
+            <a href="/pages/salao.php?id=${id}" class="block w-full text-center py-3 rounded-xl border border-rose-200 text-rose-700 font-bold hover:bg-rose-600 hover:text-white transition-all">
+                Ver Detalhes
+            </a>
         </div>
-      </div>
     </article>
-  `;
+    `;
 }
 
 function render(list) {
-  elGrid.innerHTML = list.map((item, i) => cardTemplate(item, i)).join("");
-  elCountBadge.textContent = `${list.length} encontrados`;
+    els.grid.innerHTML = list.map((item, i) => renderCard(item, i)).join("");
+    els.badge.textContent = `${list.length} encontrados`;
 }
 
 function filter() {
-  const termName = inputs.name.value.toLowerCase();
-  const termCity = inputs.city.value.toLowerCase();
+    const nameVal = els.inputName.value.toLowerCase();
+    const cityVal = els.inputCity.value.toLowerCase();
 
-  const filtered = allItems.filter(i => {
-    const n = (i.nome || "").toLowerCase();
-    const c = (i.cidade || "").toLowerCase();
-    return n.includes(termName) && c.includes(termCity);
-  });
+    const filtered = allPartners.filter(p => {
+        const n = (p.nome || "").toLowerCase();
+        const c = (p.cidade || "").toLowerCase();
+        return n.includes(nameVal) && c.includes(cityVal);
+    });
 
-  filtered.length ? elEmpty.classList.add("hidden") : elEmpty.classList.remove("hidden");
-  render(filtered);
-}
-
-// Inicialização
-(async () => {
-  try {
-    allItems = await getGlamourPartners();
-    elLoading.classList.add("hidden");
-    
-    if(!allItems.length) {
-      elEmpty.classList.remove("hidden");
-      elCountBadge.textContent = "0";
-      return;
+    if (filtered.length === 0) {
+        els.grid.innerHTML = "";
+        els.empty.classList.remove("hidden");
+    } else {
+        els.empty.classList.add("hidden");
+        render(filtered);
     }
     
-    render(allItems);
-  } catch (err) {
-    elLoading.classList.add("hidden");
-    elError.textContent = "Erro ao carregar: " + err.message;
-    elError.classList.remove("hidden");
-  }
-})();
+    // Mostra botão limpar se tiver busca
+    if(nameVal || cityVal) els.btnClear.classList.remove("hidden");
+    else els.btnClear.classList.add("hidden");
+}
 
-// Event Listeners
-btns.search.addEventListener("click", filter);
-btns.clear.addEventListener("click", () => {
-  inputs.name.value = "";
-  inputs.city.value = "";
-  filter();
+async function init() {
+    try {
+        allPartners = await getGlamourPartners();
+        els.loading.classList.add("hidden");
+
+        if (!allPartners.length) {
+            els.empty.classList.remove("hidden");
+            els.badge.textContent = "0 encontrados";
+            return;
+        }
+
+        render(allPartners);
+
+    } catch (err) {
+        els.loading.classList.add("hidden");
+        els.error.textContent = "Erro ao carregar vitrine: " + err.message;
+        els.error.classList.remove("hidden");
+    }
+}
+
+// Eventos
+els.btnSearch.addEventListener("click", filter);
+els.btnClear.addEventListener("click", () => {
+    els.inputName.value = "";
+    els.inputCity.value = "";
+    filter();
 });
-Object.values(inputs).forEach(el => el.addEventListener("keyup", (e) => {
-  if(e.key === "Enter") filter();
-}));
+els.inputName.addEventListener("keyup", (e) => e.key === "Enter" && filter());
+els.inputCity.addEventListener("keyup", (e) => e.key === "Enter" && filter());
+
+init();

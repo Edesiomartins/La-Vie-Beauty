@@ -1,132 +1,350 @@
-<!doctype html>
-<html lang="pt-br" class="scroll-smooth">
+<!DOCTYPE html>
+<html lang="pt-br">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>La Vie Beauty | Vitrine Glamour</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La Vie Beauty | Vitrine Glamour</title>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
 
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="/css/styles.css" />
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            rose: '#E11D48',  /* Rosa Principal */
+                            gold: '#B08A2E',  /* Dourado Luxo */
+                            dark: '#0F172A',  /* Azul Noturno */
+                            light: '#FDF2F8'  /* Fundo Suave */
+                        }
+                    },
+                    fontFamily: {
+                        serif: ['"Playfair Display"', 'serif'],
+                        sans: ['"Lato"', 'sans-serif'],
+                        display: ['"Cinzel"', 'serif'],
+                    },
+                    backgroundImage: {
+                        'hero-pattern': "url('https://images.unsplash.com/photo-1600948836101-f9ffda59d250?q=80&w=2000&auto=format&fit=crop')",
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Garante que o fundo não fique branco puro */
+        body { background-color: #FAFAFA; }
+
+        /* Efeito de Vidro Fosco */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        /* Animação suave de entrada */
+        .fade-up {
+            animation: fadeUp 0.8s ease-out forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        .delay-100 { animation-delay: 0.1s; }
+        .delay-200 { animation-delay: 0.2s; }
+        .delay-300 { animation-delay: 0.3s; }
+
+        @keyframes fadeUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Hover nos Cards */
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px -10px rgba(225, 29, 72, 0.15);
+        }
+    </style>
 </head>
+<body class="text-slate-800 antialiased overflow-x-hidden">
 
-<body class="bg-gray-50">
-
-  <nav class="fixed top-0 w-full z-50 glass border-b border-white/50">
-    <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-      <a href="/" class="brand-logo">La Vie Beauty</a>
-      <div class="hidden md:flex gap-6 items-center">
-        <a href="#destaques" class="text-sm font-medium hover:text-rose-600 transition">Destaques</a>
-        <a href="#app" class="text-sm font-medium hover:text-rose-600 transition">Baixar App</a>
-        <a href="https://app.la-vie-beauty.com.br" class="btn-primary text-sm py-2 px-6">Área do Profissional</a>
-      </div>
-    </div>
-  </nav>
-
-  <header class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
-    <div class="absolute inset-0 z-0">
-      <img src="https://images.unsplash.com/photo-1560066984-138dadb4c035?q=80&w=2574&auto=format&fit=crop" 
-           class="w-full h-full object-cover opacity-90" alt="Background">
-      <div class="absolute inset-0 bg-gradient-to-r from-white/95 via-white/60 to-transparent"></div>
-    </div>
-
-    <div class="relative z-10 max-w-7xl mx-auto px-6">
-      <div class="max-w-2xl">
-        <span class="text-rose-600 font-bold tracking-wider text-xs uppercase mb-2 block">Vitrine Oficial</span>
-        <h1 class="text-5xl md:text-6xl font-serif font-bold text-slate-900 leading-tight mb-6">
-          Encontre o seu momento <span class="text-transparent bg-clip-text bg-gradient-to-r from-rose-600 to-amber-500">Glamour</span>.
-        </h1>
-        <p class="text-lg text-slate-600 mb-8 font-serif italic">
-          Os melhores salões e profissionais de beleza, selecionados para você.
-        </p>
-
-        <div class="glass p-4 rounded-3xl shadow-2xl border border-white/50 backdrop-blur-md">
-          <div class="grid md:grid-cols-[1fr_1fr_auto] gap-3">
-            <div>
-              <input id="searchName" class="input-modern" placeholder="O que você procura? (Ex: Cabelo, Ana...)" />
+    <nav class="fixed top-0 w-full z-50 transition-all duration-300 glass-panel border-b border-white/20">
+        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-brand-rose to-brand-gold rounded-lg flex items-center justify-center text-white font-display font-bold text-xl shadow-lg">
+                    LV
+                </div>
+                <div>
+                    <h1 class="font-display font-bold text-lg tracking-wider text-slate-900 leading-none">La Vie</h1>
+                    <span class="text-[10px] uppercase tracking-[0.2em] text-brand-gold font-bold">Beauty</span>
+                </div>
             </div>
-            <div>
-              <input id="searchCity" class="input-modern" placeholder="Cidade (Ex: Goiânia)" />
+            
+            <div class="hidden md:flex items-center gap-6">
+                <a href="#vitrine" class="text-sm font-bold text-slate-600 hover:text-brand-rose transition">VITRINE</a>
+                <a href="#app" class="text-sm font-bold text-slate-600 hover:text-brand-rose transition">APP</a>
+                <a href="https://app.la-vie-beauty.com.br" class="px-6 py-2.5 bg-brand-dark text-white rounded-full text-xs font-bold uppercase tracking-wide hover:bg-brand-rose transition-colors shadow-lg">
+                    Área do Profissional
+                </a>
             </div>
-            <button id="btnSearch" class="btn-primary w-full md:w-auto px-8">
-              Buscar
-            </button>
-          </div>
-          <div class="mt-3 flex justify-between items-center text-xs text-slate-500 px-2">
-            <span>Filtro inteligente ativado</span>
-            <button id="btnClear" class="hover:text-rose-600 underline">Limpar filtros</button>
-          </div>
         </div>
-      </div>
-    </div>
-  </header>
+    </nav>
 
-  <section id="destaques" class="py-16 max-w-7xl mx-auto px-6">
-    <div class="flex justify-between items-end mb-10">
-      <div>
-        <h2 class="text-3xl font-bold mb-2">Parceiros em Destaque</h2>
-        <p class="text-slate-500">Exibindo apenas assinantes do plano Glamour ✨</p>
-      </div>
-      <span id="countBadge" class="bg-rose-100 text-rose-700 px-4 py-1 rounded-full text-sm font-bold">Carregando...</span>
-    </div>
-
-    <div id="loading" class="text-center py-20">
-      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-600 mx-auto"></div>
-      <p class="mt-4 text-slate-500">Buscando parceiros...</p>
-    </div>
-    
-    <div id="empty" class="hidden text-center py-20 bg-white rounded-3xl border border-dashed border-slate-200">
-      <p class="text-2xl text-slate-300 mb-2">¯\_(ツ)_/¯</p>
-      <p class="text-slate-500">Nenhum parceiro encontrado com esses termos.</p>
-    </div>
-
-    <div id="error" class="hidden p-4 bg-red-50 text-red-600 rounded-xl mb-6"></div>
-
-    <div id="grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
-      </div>
-  </section>
-
-  <section id="app" class="py-16 bg-slate-900 text-white relative overflow-hidden">
-    <div class="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-rose-900/40 to-transparent"></div>
-    <div class="max-w-7xl mx-auto px-6 relative z-10 flex flex-col md:flex-row items-center gap-10">
-      <div class="flex-1">
-        <span class="text-amber-400 font-bold tracking-widest text-xs uppercase mb-2 block">Mobile Experience</span>
-        <h2 class="text-4xl md:text-5xl font-serif font-bold mb-6">Leve o Glamour no bolso.</h2>
-        <p class="text-slate-300 text-lg mb-8 max-w-lg">
-          Agende horários, receba lembretes e encontre promoções exclusivas diretamente pelo nosso aplicativo.
-        </p>
-        <div class="flex flex-wrap gap-4">
-          <a href="https://app.la-vie-beauty.com.br" target="_blank" class="btn-gold">
-            Abrir Web App
-          </a>
-          <a href="#" class="btn-outline border-white text-white hover:bg-white hover:text-slate-900">
-            Baixar na Store
-          </a>
+    <header class="relative h-[80vh] min-h-[600px] flex items-center justify-center overflow-hidden">
+        <div class="absolute inset-0 z-0">
+            <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30 z-10"></div>
+            <img src="https://images.unsplash.com/photo-1560066984-138dadb4c035?q=80&w=2574&auto=format&fit=crop" 
+                 class="w-full h-full object-cover animate-[pulse_20s_infinite] scale-105" 
+                 alt="Salão de Luxo">
         </div>
-      </div>
-      <div class="hidden md:block w-1/3">
-        <div class="bg-white/10 backdrop-blur border border-white/20 rounded-3xl p-6 rotate-3 transform hover:rotate-0 transition duration-500">
-           <div class="text-center py-12 text-white/50">Mockup do App</div>
+
+        <div class="relative z-20 text-center max-w-4xl px-4 mt-16">
+            <span class="inline-block py-1 px-3 border border-brand-gold/50 rounded-full text-brand-gold text-xs font-bold uppercase tracking-[0.2em] mb-4 bg-black/40 backdrop-blur fade-up">
+                Vitrine Oficial
+            </span>
+            <h1 class="text-5xl md:text-7xl font-serif text-white font-bold leading-tight mb-6 drop-shadow-2xl fade-up delay-100">
+                A beleza que você <br> <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-rose to-brand-gold italic">merece.</span>
+            </h1>
+            <p class="text-gray-300 text-lg font-light mb-10 max-w-2xl mx-auto fade-up delay-200">
+                Conecte-se aos melhores profissionais e salões do plano Glamour. Agendamento rápido, simples e elegante.
+            </p>
+
+            <div class="bg-white p-2 rounded-full shadow-2xl max-w-3xl mx-auto flex flex-col md:flex-row items-center fade-up delay-300 border border-gray-200/50">
+                <div class="flex-1 w-full px-6 py-3 border-b md:border-b-0 md:border-r border-gray-100 relative">
+                    <label class="block text-[10px] font-bold text-brand-rose uppercase tracking-wide ml-1">Buscar Nome</label>
+                    <input id="searchName" class="w-full bg-transparent outline-none text-slate-800 font-serif placeholder-gray-400 font-bold text-lg" placeholder="Ex: Studio Bella..." />
+                </div>
+                <div class="flex-1 w-full px-6 py-3 relative">
+                    <label class="block text-[10px] font-bold text-brand-rose uppercase tracking-wide ml-1">Cidade</label>
+                    <input id="searchCity" class="w-full bg-transparent outline-none text-slate-800 font-serif placeholder-gray-400 font-bold text-lg" placeholder="Ex: Goiânia..." />
+                </div>
+                <button id="btnSearch" class="m-1 bg-gradient-to-r from-brand-rose to-rose-600 hover:to-rose-800 text-white rounded-full h-14 px-10 font-bold uppercase tracking-wider transition-all shadow-lg flex items-center justify-center gap-2 w-full md:w-auto">
+                    Buscar
+                </button>
+            </div>
+            
+            <div class="mt-4 flex justify-center fade-up delay-300">
+                <button id="btnClear" class="text-white/60 text-xs hover:text-white underline hidden">Limpar Filtros</button>
+            </div>
         </div>
-      </div>
-    </div>
-  </section>
+    </header>
 
-  <footer class="bg-white border-t border-slate-100 py-12">
-    <div class="max-w-7xl mx-auto px-6 text-center md:text-left flex flex-col md:flex-row justify-between items-center">
-      <div>
-        <p class="brand-logo text-xl">La Vie Beauty</p>
-        <p class="text-slate-500 text-sm mt-1">Plataforma de gestão e agendamento para beleza.</p>
-      </div>
-      <div class="mt-6 md:mt-0 text-sm text-slate-400">
-        &copy; <?php echo date('Y'); ?> La Vie Beauty. Todos os direitos reservados.
-      </div>
-    </div>
-  </footer>
+    <section id="vitrine" class="max-w-7xl mx-auto px-6 py-20 relative z-30 -mt-20">
+        <div class="flex items-end justify-between mb-8 px-2 text-white md:text-slate-800">
+            <div>
+                <h2 class="text-3xl font-serif font-bold drop-shadow-md md:drop-shadow-none">Parceiros em Destaque</h2>
+                <p class="opacity-90 text-sm">Exibindo assinantes <span class="text-brand-gold font-bold">Glamour ✨</span></p>
+            </div>
+            <span id="countBadge" class="bg-white text-brand-dark px-4 py-1 rounded-full text-xs font-bold shadow-lg">Carregando...</span>
+        </div>
 
-  <script type="module" src="/js/home.js"></script>
+        <div id="loading" class="text-center py-24 bg-white/80 backdrop-blur rounded-3xl shadow-sm border border-gray-100">
+            <i class="ph ph-spinner animate-spin text-4xl text-brand-rose mb-4 block"></i>
+            <span class="text-slate-500 font-medium">Encontrando parceiros...</span>
+        </div>
+
+        <div id="empty" class="hidden text-center py-24 bg-white rounded-3xl border border-dashed border-gray-300">
+            <i class="ph ph-magnifying-glass text-4xl text-gray-300 mb-4 block"></i>
+            <p class="text-slate-500 text-lg">Nenhum parceiro encontrado.</p>
+            <button onclick="location.reload()" class="text-brand-rose font-bold mt-2 hover:underline">Limpar busca</button>
+        </div>
+
+        <div id="error" class="hidden p-6 bg-red-50 text-red-600 rounded-xl text-center border border-red-100 mb-6"></div>
+
+        <div id="grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            </div>
+    </section>
+
+    <section id="app" class="bg-brand-dark py-24 relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+        <div class="max-w-6xl mx-auto px-6 relative z-10 flex flex-col md:flex-row items-center gap-12">
+            <div class="flex-1 text-center md:text-left">
+                <span class="text-brand-gold font-bold tracking-widest text-xs uppercase mb-2 block">Mobile Experience</span>
+                <h2 class="text-4xl md:text-5xl font-serif text-white font-bold mb-6 leading-tight">Leve o salão <br>no seu bolso.</h2>
+                <p class="text-slate-400 text-lg mb-8 max-w-md mx-auto md:mx-0">
+                    Baixe o App La Vie Beauty para agendar horários, receber lembretes e aproveitar ofertas exclusivas.
+                </p>
+                <div class="flex flex-wrap justify-center md:justify-start gap-4">
+                    <a href="https://app.la-vie-beauty.com.br" class="bg-white text-brand-dark px-8 py-3 rounded-xl font-bold hover:bg-brand-gold hover:text-white transition-all shadow-lg flex items-center gap-2">
+                        <i class="ph-bold ph-globe"></i> Web App
+                    </a>
+                    <a href="#" class="border border-slate-600 text-slate-300 px-8 py-3 rounded-xl font-bold hover:border-white hover:text-white transition-all flex items-center gap-2">
+                        <i class="ph-bold ph-download-simple"></i> Baixar Agora
+                    </a>
+                </div>
+            </div>
+            <div class="w-full md:w-1/2 flex justify-center">
+                 <div class="relative w-64 h-[500px] border-8 border-slate-800 rounded-[3rem] bg-slate-900 shadow-2xl overflow-hidden ring-1 ring-white/20">
+                    <img src="https://images.unsplash.com/photo-1522337360705-8754d3577563?q=80&w=800&auto=format&fit=crop" class="w-full h-full object-cover opacity-60">
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-white font-display text-2xl font-bold drop-shadow-lg">La Vie App</span>
+                    </div>
+                 </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-white border-t border-gray-100 py-12">
+        <div class="max-w-7xl mx-auto px-6 text-center">
+            <p class="font-display text-2xl font-bold bg-gradient-to-r from-brand-rose to-brand-gold bg-clip-text text-transparent inline-block mb-4">La Vie Beauty</p>
+            <p class="text-slate-400 text-sm">© 2024 • Beleza com Tecnologia.</p>
+        </div>
+    </footer>
+
+    <script type="module">
+        // --- 1. CONFIGURAÇÃO FIREBASE (IMPORTANTE: MANTENHA ISSO) ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+        import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+
+        // IMPORTANTE: Substitua pelas suas credenciais reais aqui se estiverem em outro arquivo
+        import { firebaseConfig } from "./js/firebaseConfig.js"; 
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const COLLECTION_NAME = "parceiros"; // Ou "saloes"
+
+        // --- 2. Elementos da UI ---
+        const ui = {
+            grid: document.getElementById("grid"),
+            loading: document.getElementById("loading"),
+            empty: document.getElementById("empty"),
+            error: document.getElementById("error"),
+            badge: document.getElementById("countBadge"),
+            searchName: document.getElementById("searchName"),
+            searchCity: document.getElementById("searchCity"),
+            btnSearch: document.getElementById("btnSearch"),
+            btnClear: document.getElementById("btnClear")
+        };
+
+        let allPartners = [];
+
+        // --- 3. Funções Auxiliares ---
+        
+        // Gera imagem bonita se não tiver foto
+        function getCoverImage(item, index) {
+            if (item.fotoCapa && item.fotoCapa.length > 10) return item.fotoCapa;
+            const topics = ["luxury", "makeup", "hair", "spa", "salon"];
+            const key = topics[index % topics.length];
+            // Unsplash com assinatura pra variar
+            return `https://source.unsplash.com/600x400/?${key}&sig=${index}`;
+        }
+
+        function createCard(item, index) {
+            const img = getCoverImage(item, index);
+            const nome = item.nome || "Parceiro La Vie";
+            const cidade = item.cidade || "Localização não informada";
+            const categoria = item.categoria || "Beleza";
+            const id = item.id;
+
+            return `
+            <div class="bg-white rounded-2xl overflow-hidden card-hover transition-all duration-300 shadow-sm border border-gray-100 group flex flex-col h-full">
+                <div class="h-56 relative overflow-hidden">
+                    <img src="${img}" alt="${nome}" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60"></div>
+                    <div class="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-bold text-brand-rose uppercase tracking-wide shadow-sm">
+                        ✨ Glamour
+                    </div>
+                </div>
+                <div class="p-6 flex flex-col flex-1">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">${categoria}</span>
+                    <h3 class="text-xl font-serif font-bold text-slate-900 leading-tight mb-2 group-hover:text-brand-rose transition-colors">${nome}</h3>
+                    <p class="text-slate-500 text-sm flex items-center gap-2 mb-6">
+                        <i class="ph-fill ph-map-pin text-brand-gold"></i>
+                        ${cidade}
+                    </p>
+                    
+                    <div class="mt-auto">
+                        <a href="/pages/salao.php?id=${id}" class="block w-full py-3 rounded-xl border border-gray-200 text-center text-sm font-bold text-slate-700 hover:bg-brand-rose hover:text-white hover:border-brand-rose transition-all">
+                            Ver Detalhes
+                        </a>
+                    </div>
+                </div>
+            </div>
+            `;
+        }
+
+        // --- 4. Lógica de Busca e Renderização ---
+        async function loadPartners() {
+            try {
+                // Query: Tenta buscar só Glamour
+                // Se der erro de permissão/index, usamos um try catch pra fallback
+                const q = query(
+                    collection(db, COLLECTION_NAME),
+                    where("plano", "==", "glamour"),
+                    where("planoAtivo", "==", true)
+                );
+                
+                const snap = await getDocs(q);
+                allPartners = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                // Se Firestore retornar vazio (ou erro de config), 
+                // remova este IF em produção real se não quiser dados falsos.
+                if (allPartners.length === 0) {
+                     console.log("Nenhum dado real encontrado. Verifique collection name.");
+                }
+
+                render(allPartners);
+
+            } catch (err) {
+                console.error("Erro Firebase:", err);
+                ui.loading.classList.add("hidden");
+                ui.error.textContent = "Erro ao conectar com o banco de dados. Verifique o Console.";
+                ui.error.classList.remove("hidden");
+            }
+        }
+
+        function render(list) {
+            ui.loading.classList.add("hidden");
+            ui.badge.textContent = `${list.length} encontrados`;
+
+            if (list.length === 0) {
+                ui.empty.classList.remove("hidden");
+                ui.grid.innerHTML = "";
+                return;
+            }
+
+            ui.empty.classList.add("hidden");
+            ui.grid.innerHTML = list.map((item, i) => createCard(item, i)).join("");
+        }
+
+        function filterPartners() {
+            const nameVal = ui.searchName.value.toLowerCase();
+            const cityVal = ui.searchCity.value.toLowerCase();
+
+            const filtered = allPartners.filter(p => {
+                const n = (p.nome || "").toLowerCase();
+                const c = (p.cidade || "").toLowerCase();
+                return n.includes(nameVal) && c.includes(cityVal);
+            });
+
+            if (nameVal || cityVal) ui.btnClear.classList.remove("hidden");
+            else ui.btnClear.classList.add("hidden");
+
+            render(filtered);
+        }
+
+        // --- 5. Eventos ---
+        ui.btnSearch.addEventListener("click", filterPartners);
+        
+        ui.btnClear.addEventListener("click", () => {
+            ui.searchName.value = "";
+            ui.searchCity.value = "";
+            filterPartners();
+        });
+
+        // Enter key support
+        [ui.searchName, ui.searchCity].forEach(input => {
+            input.addEventListener("keyup", (e) => {
+                if(e.key === "Enter") filterPartners();
+            });
+        });
+
+        // Start
+        loadPartners();
+    </script>
 </body>
 </html>
