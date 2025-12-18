@@ -32,7 +32,7 @@
     <div id="loading" class="text-center py-10 bg-white rounded-xl shadow p-10">Carregando perfil...</div>
     <div id="error" class="hidden bg-red-100 text-red-600 p-4 rounded-xl text-center"></div>
 
-    <div id="content" class="hidden grid lg:grid-cols-[1fr_350px] gap-8">
+    <div id="content" class="hidden lg:grid-cols-[1fr_350px] gap-8">
       
       <div class="space-y-6">
         <div class="bg-white rounded-3xl p-8 shadow-xl">

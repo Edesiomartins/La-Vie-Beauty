@@ -1325,7 +1325,7 @@ const SettingsScreen = ({
                         </button>
                     </div>
                     
-                    {/* Botão de Copiar Link Formatado para WhatsApp */}
+                    {/* Botão de Copiar Link Encurtado para WhatsApp */}
                     <button
                         onClick={async () => {
                             if (!salonData?.id) {
@@ -1333,35 +1333,58 @@ const SettingsScreen = ({
                                 return;
                             }
                             
-                            // Função de copiar link WhatsApp
-                            const salonId = salonData.id.trim();
-                            const appUrl = `https://app.la-vie-beauty.com.br/?salonId=${salonId}`;
-                            const salonName = salonData?.name || 'nosso salão';
-                            const whatsappText = `Olá! Agende seu horário em ${salonName} através deste link:\n\n${appUrl}\n\n✨ Agende com facilidade e rapidez!`;
-                            const whatsappLink = `https://wa.me/?text=${encodeURIComponent(whatsappText)}`;
-                            
                             try {
-                                await navigator.clipboard.writeText(whatsappLink);
+                                // Gera o link completo do app
+                                const salonId = salonData.id.trim();
+                                const appUrl = `https://app.la-vie-beauty.com.br/?salonId=${salonId}`;
+                                
+                                // Encurta o link via API
+                                const response = await fetch('/api/shorten-url', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({ url: appUrl })
+                                });
+
+                                if (!response.ok) {
+                                    throw new Error('Erro ao encurtar link');
+                                }
+
+                                const data = await response.json();
+                                const shortUrl = data.shortUrl;
+
+                                // Copia apenas o link encurtado (não abre WhatsApp)
+                                await navigator.clipboard.writeText(shortUrl);
                                 setLinkCopied(true);
                                 setTimeout(() => setLinkCopied(false), 3000);
-                                alert('✅ Link WhatsApp copiado! Cole em qualquer conversa.');
+                                alert(`✅ Link encurtado copiado!\n\n${shortUrl}\n\nCole este link no WhatsApp ou onde quiser compartilhar.`);
                             } catch (err) {
-                                // Fallback para navegadores antigos
-                                const input = document.createElement('input');
-                                input.value = whatsappLink;
-                                document.body.appendChild(input);
-                                input.select();
-                                document.execCommand('copy');
-                                document.body.removeChild(input);
-                                setLinkCopied(true);
-                                setTimeout(() => setLinkCopied(false), 3000);
-                                alert('✅ Link WhatsApp copiado! Cole em qualquer conversa.');
+                                console.error('Erro ao encurtar link:', err);
+                                
+                                // Fallback: copia o link original se a API falhar
+                                const salonId = salonData.id.trim();
+                                const appUrl = `https://app.la-vie-beauty.com.br/?salonId=${salonId}`;
+                                
+                                try {
+                                    await navigator.clipboard.writeText(appUrl);
+                                    alert('⚠️ Link original copiado (encurtamento indisponível).');
+                                } catch (fallbackErr) {
+                                    // Fallback para navegadores antigos
+                                    const input = document.createElement('input');
+                                    input.value = appUrl;
+                                    document.body.appendChild(input);
+                                    input.select();
+                                    document.execCommand('copy');
+                                    document.body.removeChild(input);
+                                    alert('⚠️ Link original copiado (encurtamento indisponível).');
+                                }
                             }
                         }}
                         className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:from-green-600 hover:to-green-700 transition-all shadow-lg hover:shadow-xl active:scale-95"
                     >
                         <MessageCircle size={20} className="shrink-0" />
-                        <span className="whitespace-nowrap">Compartilhar no WhatsApp</span>
+                        <span className="whitespace-nowrap">Copiar Link Encurtado</span>
                     </button>
                 </div>
                 
