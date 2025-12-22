@@ -13,7 +13,6 @@ import slotsHandler from './api/get-slots.js';
 import syncHandler from './api/sync-status.js';
 import checkoutHandler from './api/create-checkout.js';
 import webhookHandler from './api/webhook-asaas.js';
-import shortenUrlHandler from './api/shorten-url.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -63,7 +62,7 @@ app.post('/api/webhook-asaas', async (req, res) => {
     catch (e) { res.status(500).json({error: e.message}); }
 });
 
-// --- ROTA 5: ENCURTAR URL ---
+// --- ROTA 5: ENCURTAR URL (TinyURL) ---
 app.post('/api/shorten-url', async (req, res) => {
     console.log("🔗 Encurtando URL...");
     try { await shortenUrlHandler(req, res); } 

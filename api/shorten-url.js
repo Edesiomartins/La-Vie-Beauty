@@ -1,5 +1,10 @@
 // api/shorten-url.js
-// Encurtador de URL usando TinyURL (gratuito, sem autenticação)
+// Encurtador de URL usando TinyURL API v1 (com token - sem página intermediária)
+// Token configurado em: TINYURL_API_TOKEN
+
+import 'dotenv/config';
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
 
 export default async function shortenUrlHandler(req, res) {
     if (req.method !== 'POST') {
@@ -20,30 +25,55 @@ export default async function shortenUrlHandler(req, res) {
             return res.status(400).json({ error: 'URL inválida' });
         }
 
-        // Usando TinyURL API (gratuita, sem autenticação)
-        const tinyUrlApi = `https://tinyurl.com/api-create.php?url=${encodeURIComponent(url)}`;
-        
-        const response = await fetch(tinyUrlApi);
-        
-        if (!response.ok) {
-            throw new Error('Erro ao encurtar URL');
+        const tinyUrlToken = process.env.TINYURL_API_TOKEN;
+
+        if (!tinyUrlToken) {
+            return res.status(500).json({ 
+                error: 'TINYURL_API_TOKEN não configurado',
+                message: 'Configure TINYURL_API_TOKEN no .env.local'
+            });
         }
 
-        const shortUrl = await response.text();
+        // Usa TinyURL API v1 com token (redirecionamento direto sem página intermediária)
+        // Endpoint: https://api.tinyurl.com/create
+        const tinyUrlResponse = await fetch('https://api.tinyurl.com/create', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${tinyUrlToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                url: url
+            })
+        });
 
-        // TinyURL retorna a URL encurtada como texto simples
-        if (!shortUrl || shortUrl.startsWith('Error')) {
-            throw new Error('Erro ao gerar link encurtado');
+        if (!tinyUrlResponse.ok) {
+            const errorText = await tinyUrlResponse.text();
+            let errorData;
+            try {
+                errorData = JSON.parse(errorText);
+            } catch {
+                errorData = { message: errorText || 'Erro ao encurtar URL no TinyURL' };
+            }
+            const errorMessage = errorData.message || errorData.errors?.[0]?.message || errorData.errors?.[0] || 'Erro ao encurtar URL no TinyURL';
+            console.error('❌ Erro TinyURL API:', errorMessage, errorData);
+            throw new Error(errorMessage);
         }
 
-        // Remove espaços em branco e quebras de linha
-        const cleanShortUrl = shortUrl.trim().replace(/\s+/g, '');
+        const tinyUrlData = await tinyUrlResponse.json();
+        // A resposta pode vir em diferentes formatos: data.tiny_url ou tiny_url diretamente
+        const shortUrl = tinyUrlData.data?.tiny_url || tinyUrlData.data?.url || tinyUrlData.tiny_url || tinyUrlData.url;
 
-        console.log(`✅ URL encurtada: ${url} -> ${cleanShortUrl}`);
+        if (!shortUrl) {
+            throw new Error('Resposta inválida do TinyURL');
+        }
+
+        console.log(`✅ URL encurtada (TinyURL): ${url} -> ${shortUrl}`);
 
         return res.status(200).json({ 
-            shortUrl: cleanShortUrl,
-            originalUrl: url 
+            shortUrl: shortUrl,
+            originalUrl: url,
+            provider: 'tinyurl'
         });
 
     } catch (error) {

@@ -1338,7 +1338,7 @@ const SettingsScreen = ({
                                 const salonId = salonData.id.trim();
                                 const appUrl = `https://app.la-vie-beauty.com.br/?salonId=${salonId}`;
                                 
-                                // Encurta o link via API
+                                // Encurta o link via API (TinyURL)
                                 const response = await fetch('/api/shorten-url', {
                                     method: 'POST',
                                     headers: {
@@ -1354,7 +1354,7 @@ const SettingsScreen = ({
                                 const data = await response.json();
                                 const shortUrl = data.shortUrl;
 
-                                // Copia apenas o link encurtado (não abre WhatsApp)
+                                // Copia o link encurtado
                                 await navigator.clipboard.writeText(shortUrl);
                                 setLinkCopied(true);
                                 setTimeout(() => setLinkCopied(false), 3000);
