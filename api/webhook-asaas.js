@@ -1,6 +1,6 @@
 // api/webhook-asaas.js
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, getDoc, updateDoc, doc } from 'firebase/firestore';
 import dotenv from 'dotenv';
 
 dotenv.config({ path: '.env.local' });
@@ -20,52 +20,94 @@ const db = getFirestore(app);
 
 export default async function handler(req, res) {
   // Webhooks geralmente são POST
-  if (req.method !== 'POST') return res.status(405).json({ message: 'Method Not Allowed' });
-
-  const { event, payment } = req.body;
-
-  // Só nos interessa pagamento confirmado
-  if (event !== 'PAYMENT_RECEIVED' && event !== 'PAYMENT_CONFIRMED') {
-      return res.status(200).json({ received: true }); // Ignora outros eventos
+  if (req.method !== 'POST') {
+    return res.status(200).json({ ok: true }); // Sempre 200
   }
 
-  console.log(`🔔 Webhook Asaas: Pagamento ${payment.id} confirmado! Valor: ${payment.value}`);
-
   try {
+    const payload = req.body || {};
+    const { event, payment } = payload;
+
+    // Blindagem: Verificar externalReference (só aceita La-Vie)
+    const externalRef = payment?.externalReference || '';
+    
+    if (!externalRef.startsWith('LAVIE_')) {
+      console.log(`⚠️ Webhook ignorado: externalReference não é La-Vie (${externalRef})`);
+      return res.status(200).json({ ignored: true }); // Sempre 200, mas ignora
+    }
+
+    // Só nos interessa pagamento confirmado
+    if (event !== 'PAYMENT_RECEIVED' && event !== 'PAYMENT_CONFIRMED') {
+      return res.status(200).json({ received: true }); // Ignora outros eventos
+    }
+
+    console.log(`🔔 Webhook Asaas: Pagamento ${payment.id} confirmado! Valor: ${payment.value} | Ref: ${externalRef}`);
+
     const customerId = payment.customer;
     const value = payment.value;
 
     // 1. Descobrir qual Plano é baseado no valor
     let newPlan = 'free';
-    if (value >= 49.00 && value < 80.00) newPlan = 'pro'; // Shine
-    if (value >= 89.00) newPlan = 'premium'; // Glamour
+    if (value >= 49.00 && value < 80.00) newPlan = 'shine'; // Shine
+    if (value >= 89.00) newPlan = 'glamour'; // Glamour
 
-    // 2. Achar o Salão no Firebase pelo ID do Asaas
-    const salonsRef = collection(db, 'salons');
-    const q = query(salonsRef, where('asaasCustomerId', '==', customerId));
-    const snapshot = await getDocs(q);
+    // 2. Extrair salonId do externalReference
+    const salonId = externalRef.replace('LAVIE_', '');
 
-    if (snapshot.empty) {
+    // 3. Achar o Salão no Firebase pelo salonId (direto) ou pelo asaasCustomerId (fallback)
+    let salonRef;
+    let salonData;
+    
+    if (salonId) {
+      // Tenta pelo salonId primeiro (mais direto e rápido)
+      salonRef = doc(db, 'salons', salonId);
+      const salonSnap = await getDoc(salonRef);
+      
+      if (salonSnap.exists()) {
+        salonData = salonSnap.data();
+      } else {
+        // Fallback: busca pelo asaasCustomerId
+        const salonsRef = collection(db, 'salons');
+        const q = query(salonsRef, where('asaasCustomerId', '==', customerId));
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.empty) {
+          console.error(`❌ Salão não encontrado: ID=${salonId}, Customer=${customerId}`);
+          return res.status(200).json({ ok: true }); // Sempre 200, mesmo se não encontrar
+        }
+        
+        salonRef = doc(db, 'salons', snapshot.docs[0].id);
+        salonData = snapshot.docs[0].data();
+      }
+    } else {
+      // Fallback: busca pelo asaasCustomerId
+      const salonsRef = collection(db, 'salons');
+      const q = query(salonsRef, where('asaasCustomerId', '==', customerId));
+      const snapshot = await getDocs(q);
+      
+      if (snapshot.empty) {
         console.error(`❌ Salão não encontrado para o cliente Asaas: ${customerId}`);
-        return res.status(404).json({ error: 'Salon not found' });
+        return res.status(200).json({ ok: true }); // Sempre 200, mesmo se não encontrar
+      }
+      
+      salonRef = doc(db, 'salons', snapshot.docs[0].id);
+      salonData = snapshot.docs[0].data();
     }
 
-    // 3. Atualizar o Plano
-    const salonDoc = snapshot.docs[0];
-    const salonRef = doc(db, 'salons', salonDoc.id);
-
+    // 4. Atualizar o Plano
     await updateDoc(salonRef, {
-        plan: newPlan,
-        lastPaymentDate: new Date().toISOString(),
-        status: 'active'
+      plan: newPlan,
+      lastPaymentDate: new Date().toISOString(),
+      status: 'active'
     });
 
-    console.log(`✅ SUCESSO: Salão "${salonDoc.data().name}" atualizado para o plano ${newPlan}!`);
+    console.log(`✅ SUCESSO: Salão "${salonData?.name || salonId}" atualizado para o plano ${newPlan}!`);
 
-    return res.status(200).json({ success: true });
+    return res.status(200).json({ ok: true });
 
   } catch (error) {
-    console.error('Erro Webhook:', error);
-    return res.status(500).json({ error: error.message });
+    // Nunca deixar erro subir - sempre retorna 200
+    console.error('❌ Erro Webhook (ignorado):', error);
+    return res.status(200).json({ ok: true });
   }
 }

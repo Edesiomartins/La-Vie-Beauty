@@ -79,7 +79,7 @@ export default async function handler(req, res) {
         console.log(`✅ Salão ${salonId} vinculado ao cliente Asaas ${customerId}`);
     }
 
-    // 3. Criar Assinatura
+    // 3. Criar Assinatura (com externalReference obrigatório)
     const subRes = await fetch(`${ASAAS_URL}/subscriptions`, {
       method: 'POST', headers,
       body: JSON.stringify({
@@ -88,7 +88,8 @@ export default async function handler(req, res) {
         value: selectedPlan.value,
         nextDueDate: new Date().toISOString().split('T')[0],
         cycle: 'MONTHLY',
-        description: selectedPlan.name
+        description: selectedPlan.name,
+        externalReference: `LAVIE_${salonId}` // 🔒 Identificação obrigatória do La-Vie
       })
     });
 
