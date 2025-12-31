@@ -44,12 +44,22 @@ export default async function handler(req, res) {
     console.log(`🔔 Webhook Asaas: Pagamento ${payment.id} confirmado! Valor: ${payment.value} | Ref: ${externalRef}`);
 
     const customerId = payment.customer;
-    const value = payment.value;
+    const value = parseFloat(payment.value) || 0;
+    const paymentId = payment.id;
 
-    // 1. Descobrir qual Plano é baseado no valor
-    let newPlan = 'free';
-    if (value >= 49.00 && value < 80.00) newPlan = 'shine'; // Shine
-    if (value >= 89.00) newPlan = 'glamour'; // Glamour
+    // 1. Descobrir qual Plano é baseado no valor (APENAS se for um valor válido de plano pago)
+    let newPlan = null; // null = não atualizar o plano
+    if (value >= 49.00 && value < 80.00) {
+      newPlan = 'pro'; // Shine (mapeado como 'pro' no frontend)
+    } else if (value >= 89.00) {
+      newPlan = 'premium'; // Glamour (mapeado como 'premium' no frontend)
+    }
+    
+    // Se não for um plano pago válido, ignora (não reseta para free)
+    if (!newPlan) {
+      console.log(`⚠️ Valor ${value} não corresponde a um plano pago. Ignorando atualização.`);
+      return res.status(200).json({ ok: true, ignored: 'invalid_plan_value' });
+    }
 
     // 2. Extrair salonId do externalReference
     const salonId = externalRef.replace('LAVIE_', '');
@@ -94,14 +104,23 @@ export default async function handler(req, res) {
       salonData = snapshot.docs[0].data();
     }
 
-    // 4. Atualizar o Plano
+    // 4. Verificar se já processou este pagamento (idempotência)
+    // Evita processar o mesmo pagamento múltiplas vezes
+    const lastProcessedPayment = salonData?.lastProcessedPaymentId;
+    if (lastProcessedPayment === paymentId) {
+      console.log(`⚠️ Pagamento ${paymentId} já foi processado anteriormente. Ignorando.`);
+      return res.status(200).json({ ok: true, ignored: 'already_processed' });
+    }
+
+    // 5. Atualizar o Plano (apenas se for um plano pago válido)
     await updateDoc(salonRef, {
       plan: newPlan,
       lastPaymentDate: new Date().toISOString(),
+      lastProcessedPaymentId: paymentId, // Marca como processado
       status: 'active'
     });
 
-    console.log(`✅ SUCESSO: Salão "${salonData?.name || salonId}" atualizado para o plano ${newPlan}!`);
+    console.log(`✅ SUCESSO: Salão "${salonData?.name || salonId}" atualizado para o plano ${newPlan}! (Pagamento: ${paymentId})`);
 
     return res.status(200).json({ ok: true });
 

@@ -3395,7 +3395,7 @@ export default function App() {
                 phone: ownerForm.phone,
                 email: ownerForm.email.trim(),
                 googleCalendarId: '',
-                plan: 'free_trial',
+                plan: 'free',
                 active: true,
                 createdAt: new Date().toISOString(),
                 securityHash
