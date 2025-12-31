@@ -112,13 +112,56 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, ignored: 'already_processed' });
     }
 
-    // 5. Atualizar o Plano (apenas se for um plano pago válido)
-    await updateDoc(salonRef, {
+    // 5. BACKUP: Log completo dos dados antes de atualizar (para debug)
+    console.log(`📋 BACKUP ANTES DE ATUALIZAR - Salão ID: ${salonId}`);
+    console.log(`   Nome: ${salonData?.name || 'N/A'}`);
+    console.log(`   Plano Atual: ${salonData?.plan || 'N/A'}`);
+    console.log(`   Email: ${salonData?.email || 'N/A'}`);
+    console.log(`   Telefone: ${salonData?.phone || 'N/A'}`);
+    console.log(`   Endereço: ${salonData?.address || 'N/A'}`);
+    console.log(`   Google Calendar ID: ${salonData?.googleCalendarId || 'N/A'}`);
+    console.log(`   Status: ${salonData?.status || 'N/A'}`);
+    console.log(`   Campos adicionais:`, Object.keys(salonData || {}));
+
+    // 6. Atualizar APENAS os campos de pagamento (preserva todos os outros campos)
+    // O updateDoc do Firebase preserva automaticamente todos os campos existentes
+    const updateData = {
       plan: newPlan,
       lastPaymentDate: new Date().toISOString(),
       lastProcessedPaymentId: paymentId, // Marca como processado
       status: 'active'
-    });
+    };
+
+    // Garantir que campos críticos não sejam sobrescritos
+    // Se algum campo crítico estiver faltando, preservar do estado atual
+    if (!salonData?.name) {
+      console.warn(`⚠️ ATENÇÃO: Salão sem nome! ID: ${salonId}`);
+    }
+    if (!salonData?.email) {
+      console.warn(`⚠️ ATENÇÃO: Salão sem email! ID: ${salonId}`);
+    }
+
+    await updateDoc(salonRef, updateData);
+
+    // 7. Verificar se os dados foram preservados após atualização
+    const verifySnap = await getDoc(salonRef);
+    const verifyData = verifySnap.exists() ? verifySnap.data() : null;
+    
+    if (verifyData) {
+      console.log(`✅ VERIFICAÇÃO PÓS-ATUALIZAÇÃO - Salão ID: ${salonId}`);
+      console.log(`   Nome preservado: ${verifyData?.name ? '✅' : '❌'} ${verifyData?.name || 'N/A'}`);
+      console.log(`   Email preservado: ${verifyData?.email ? '✅' : '❌'} ${verifyData?.email || 'N/A'}`);
+      console.log(`   Telefone preservado: ${verifyData?.phone ? '✅' : '❌'} ${verifyData?.phone || 'N/A'}`);
+      console.log(`   Novo Plano: ${verifyData?.plan || 'N/A'}`);
+      
+      // Alertar se algum campo crítico foi perdido
+      if (salonData?.name && !verifyData?.name) {
+        console.error(`❌ ERRO CRÍTICO: Nome do salão foi perdido!`);
+      }
+      if (salonData?.email && !verifyData?.email) {
+        console.error(`❌ ERRO CRÍTICO: Email do salão foi perdido!`);
+      }
+    }
 
     console.log(`✅ SUCESSO: Salão "${salonData?.name || salonId}" atualizado para o plano ${newPlan}! (Pagamento: ${paymentId})`);
 

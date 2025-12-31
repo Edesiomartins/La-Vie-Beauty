@@ -3388,6 +3388,16 @@ export default function App() {
         const salonId = ownerForm.name.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Date.now();
 
         try {
+            // PROTEÇÃO: Verificar se o salão já existe antes de criar
+            const salonRef = doc(db, "salons", salonId);
+            const salonCheck = await getDoc(salonRef);
+            
+            if (salonCheck.exists()) {
+                alert("⚠️ Erro: Um salão com este ID já existe! Por favor, tente novamente com um nome diferente.");
+                setLoading(false);
+                return;
+            }
+            
             const securityHash = await hashSecurityCode(ownerForm.securityCode);
             const newSalon = {
                 name: ownerForm.name,
@@ -3401,7 +3411,8 @@ export default function App() {
                 securityHash
             };
 
-            await setDoc(doc(db, "salons", salonId), newSalon);
+            // Usar setDoc apenas para criar NOVO documento (não sobrescreve se existir)
+            await setDoc(salonRef, newSalon, { merge: false }); // merge: false garante que só cria se não existir
             
             // NOVO: Criar o proprietário como colaborador automaticamente
             try {
