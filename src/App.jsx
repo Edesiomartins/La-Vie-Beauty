@@ -2519,7 +2519,27 @@ const AdminScreen = ({
                             <Settings size={20} className="text-pink-500" />
                             Painel Admin
                         </h1>
-                        <p className="text-gray-400 text-xs mt-1 font-medium">{salonData?.name}</p>
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <p className="text-gray-400 text-xs font-medium">{salonData?.name}</p>
+                            {/* Badge do Plano */}
+                            {(() => {
+                                const plan = salonData?.plan || 'free';
+                                const planConfig = {
+                                    free: { name: 'Gratuito', color: 'bg-gray-500', icon: Lock },
+                                    pro: { name: 'Shine ✨', color: 'bg-amber-500', icon: Sparkles },
+                                    premium: { name: 'Glamour 💎', color: 'bg-fuchsia-600', icon: Star }
+                                };
+                                const currentPlan = planConfig[plan] || planConfig.free;
+                                const PlanIcon = currentPlan.icon;
+                                
+                                return (
+                                    <span className={`${currentPlan.color} text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm`}>
+                                        <PlanIcon size={10} />
+                                        {currentPlan.name}
+                                    </span>
+                                );
+                            })()}
+                        </div>
                     </div>
                     
                     <button 
@@ -3192,6 +3212,13 @@ export default function App() {
             const params = new URLSearchParams(window.location.search);
             let salonIdFromUrl = params.get('salonId');
 
+            // Debug: Log para verificar o que está vindo na URL
+            console.log("🔍 Verificando URL:", {
+                fullUrl: window.location.href,
+                search: window.location.search,
+                salonIdFromUrl: salonIdFromUrl
+            });
+
             if (salonIdFromUrl) {
                 // Limpa o salonId de possíveis espaços ou caracteres extras do WhatsApp
                 salonIdFromUrl = salonIdFromUrl.trim();
@@ -3199,26 +3226,59 @@ export default function App() {
                 // Remove quebras de linha e espaços extras que podem vir do WhatsApp
                 salonIdFromUrl = salonIdFromUrl.replace(/\s+/g, '').replace(/\n/g, '').replace(/\r/g, '');
                 
+                // Remove caracteres inválidos (mantém apenas letras, números, hífen e underscore)
+                salonIdFromUrl = salonIdFromUrl.replace(/[^a-zA-Z0-9\-_]/g, '');
+                
+                console.log("🔍 SalonId limpo:", salonIdFromUrl);
+                
+                if (!salonIdFromUrl || salonIdFromUrl.length < 3) {
+                    console.error("SalonId inválido após limpeza:", salonIdFromUrl);
+                    alert("⚠️ Link inválido. O ID do salão não foi encontrado na URL.\n\nVerifique se o link está completo.");
+                    setView('landing');
+                    return;
+                }
+                
                 setLoading(true);
                 try {
                     // Busca o salão específico pelo ID da URL
                     const salonRef = doc(db, "salons", salonIdFromUrl);
+                    console.log("🔍 Buscando salão no Firebase:", salonIdFromUrl);
+                    
                     const salonSnap = await getDoc(salonRef);
                     
                     if (salonSnap.exists()) {
                         const salonData = { id: salonSnap.id, ...salonSnap.data() };
+                        console.log("✅ Salão encontrado:", salonData.name);
+                        
                         // Define o salão e joga o usuário para a tela de login/cadastro
                         setCurrentSalonId(salonData.id);
                         setSalonData(salonData);
                         setView('client-login'); // Vai para login/cadastro primeiro
                     } else {
-                        console.error("Salão não encontrado. ID buscado:", salonIdFromUrl);
-                        alert("⚠️ Salão não encontrado ou link inválido.\n\nVerifique se o link está completo e correto.");
+                        console.error("❌ Salão não encontrado. ID buscado:", salonIdFromUrl);
+                        alert("⚠️ Salão não encontrado ou link inválido.\n\nID buscado: " + salonIdFromUrl + "\n\nVerifique se o link está completo e correto.");
                         setView('landing');
                     }
                 } catch (error) {
                     console.error("Erro ao carregar salão via URL:", error);
-                    alert("⚠️ Erro ao carregar o salão. Tente novamente.");
+                    console.error("Detalhes do erro:", {
+                        code: error.code,
+                        message: error.message,
+                        salonId: salonIdFromUrl
+                    });
+                    
+                    // Mensagem de erro mais específica
+                    let errorMessage = "⚠️ Erro ao carregar o salão.";
+                    
+                    if (error.code === 'permission-denied' || error.message?.includes('PERMISSION_DENIED')) {
+                        errorMessage = "⚠️ Erro de permissão ao acessar o salão.\n\nAs regras do Firestore podem não estar configuradas corretamente.\n\nPor favor, entre em contato com o suporte.";
+                    } else if (error.code === 'unavailable' || error.message?.includes('unavailable')) {
+                        errorMessage = "⚠️ Serviço temporariamente indisponível.\n\nVerifique sua conexão com a internet e tente novamente.";
+                    } else {
+                        errorMessage = `⚠️ Erro ao carregar o salão: ${error.message || 'Erro desconhecido'}\n\nTente novamente ou entre em contato com o suporte.`;
+                    }
+                    
+                    alert(errorMessage);
                     setView('landing');
                 } finally {
                     setLoading(false);

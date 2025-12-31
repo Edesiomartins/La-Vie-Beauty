@@ -13,6 +13,8 @@ import slotsHandler from './api/get-slots.js';
 import syncHandler from './api/sync-status.js';
 import checkoutHandler from './api/create-checkout.js';
 import webhookHandler from './api/webhook-asaas.js';
+import shortenUrlHandler from './api/shorten-url.js';
+import getWebhookLogsHandler from './api/get-webhook-logs.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -66,6 +68,13 @@ app.post('/api/webhook-asaas', async (req, res) => {
 app.post('/api/shorten-url', async (req, res) => {
     console.log("🔗 Encurtando URL...");
     try { await shortenUrlHandler(req, res); } 
+    catch (e) { res.status(500).json({error: e.message}); }
+});
+
+// --- ROTA 6: VISUALIZAR LOGS DO WEBHOOK (substitui logs do Vercel) ---
+app.get('/api/webhook-logs', async (req, res) => {
+    console.log("📋 Buscando logs do webhook...");
+    try { await getWebhookLogsHandler(req, res); } 
     catch (e) { res.status(500).json({error: e.message}); }
 });
 

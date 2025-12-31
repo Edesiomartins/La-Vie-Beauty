@@ -1,0 +1,52 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Regras para Salões
+    match /salons/{salonId} {
+      // Permitir leitura pública (para clientes acessarem)
+      allow read: if true;
+      
+      // Permitir escrita apenas se autenticado OU se for webhook (via campo especial)
+      // Para webhooks do servidor, vamos permitir escrita direta
+      allow write: if true; // Temporariamente permissivo para webhooks funcionarem
+      
+      // Subcoleções de Salões
+      match /clients/{clientId} {
+        allow read, write: if true;
+      }
+      
+      match /collaborators/{collaboratorId} {
+        allow read, write: if true;
+      }
+      
+      match /appointments/{appointmentId} {
+        allow read, write: if true;
+      }
+      
+      match /services/{serviceId} {
+        allow read, write: if true;
+      }
+    }
+    
+    // Regras para Logs de Webhook (permitir escrita do servidor)
+    match /webhook_logs/{logId} {
+      // Permitir leitura pública (para debug)
+      allow read: if true;
+      
+      // Permitir escrita (webhooks do servidor)
+      allow write: if true;
+    }
+    
+    // Regras para Serviços Globais
+    match /global_services/{serviceId} {
+      allow read: if true;
+      allow write: if false; // Apenas admin pode escrever
+    }
+    
+    // Regras padrão: negar tudo que não foi explicitamente permitido
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
